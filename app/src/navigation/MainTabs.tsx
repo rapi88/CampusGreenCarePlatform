@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Text } from 'react-native';
 import { Colors } from '../theme/colors';
+import { useAuthStore } from '../store/auth.store';
 
 // Screens
 import MapScreen from '../screens/map/MapScreen';
@@ -17,6 +18,13 @@ import EditProfileScreen from '../screens/profile/EditProfileScreen';
 import LeaderboardScreen from '../screens/profile/LeaderboardScreen';
 import NotificationSettingsScreen from '../screens/profile/NotificationSettingsScreen';
 
+// Admin screens
+import AdminDashboardScreen from '../screens/admin/AdminDashboardScreen';
+import AdminTreeListScreen from '../screens/admin/AdminTreeListScreen';
+import AdminAddEditTreeScreen from '../screens/admin/AdminAddEditTreeScreen';
+import AdminReportsScreen from '../screens/admin/AdminReportsScreen';
+import AdminUserManagementScreen from '../screens/admin/AdminUserManagementScreen';
+
 export type TreeStackParamList = {
   TreeDetail: { treeId: string };
   Watering: { treeId: string };
@@ -29,10 +37,16 @@ export type MainTabsParamList = {
   MapTab: undefined;
   MyTreesTab: undefined;
   ProfileTab: undefined;
+  AdminTab?: undefined;
 };
 
 export type AppStackParamList = TreeStackParamList & {
   Tabs: undefined;
+  // Admin sub-screens accessible from the admin tab
+  AdminTreeList: undefined;
+  AdminAddEditTree: { treeId?: string };
+  AdminReports: undefined;
+  AdminUserManagement: undefined;
 };
 
 const Tab = createBottomTabNavigator<MainTabsParamList>();
@@ -51,6 +65,9 @@ function ProfileNavigator() {
 }
 
 function TabNavigator() {
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role === 'ADMIN';
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -68,6 +85,7 @@ function TabNavigator() {
             MapTab: 'Harita',
             MyTreesTab: 'Ağaçlarım',
             ProfileTab: 'Profil',
+            AdminTab: 'Admin',
           };
           return (
             <Text style={{ fontSize: 11, color, fontWeight: '500' }}>
@@ -80,6 +98,7 @@ function TabNavigator() {
             MapTab: '🗺️',
             MyTreesTab: '🌲',
             ProfileTab: '👤',
+            AdminTab: '⚙️',
           };
           return <Text style={{ fontSize: size - 4 }}>{icons[route.name]}</Text>;
         },
@@ -88,6 +107,9 @@ function TabNavigator() {
       <Tab.Screen name="MapTab" component={MapScreen} />
       <Tab.Screen name="MyTreesTab" component={MyTreesScreen} />
       <Tab.Screen name="ProfileTab" component={ProfileNavigator} />
+      {isAdmin && (
+        <Tab.Screen name="AdminTab" component={AdminDashboardScreen} />
+      )}
     </Tab.Navigator>
   );
 }
@@ -101,6 +123,11 @@ export default function MainTabs() {
       <AppStack.Screen name="Adoption" component={AdoptionScreen} />
       <AppStack.Screen name="Chat" component={ChatScreen} />
       <AppStack.Screen name="Notes" component={NotesScreen} />
+      {/* Admin sub-screens (navigable from admin dashboard) */}
+      <AppStack.Screen name="AdminTreeList" component={AdminTreeListScreen} />
+      <AppStack.Screen name="AdminAddEditTree" component={AdminAddEditTreeScreen} />
+      <AppStack.Screen name="AdminReports" component={AdminReportsScreen} />
+      <AppStack.Screen name="AdminUserManagement" component={AdminUserManagementScreen} />
     </AppStack.Navigator>
   );
 }
