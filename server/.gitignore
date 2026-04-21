@@ -1,0 +1,5 @@
+node_modules/
+dist/
+.env
+public/uploads/trees/*
+!public/uploads/trees/.gitkeep

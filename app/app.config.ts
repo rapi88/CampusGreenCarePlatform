@@ -15,8 +15,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   ios: {
     supportsTablet: true,
+    bundleIdentifier: 'com.anonymous.app',
   },
   android: {
+    package: 'com.anonymous.app',
     adaptiveIcon: {
       backgroundColor: '#E6F4FE',
       foregroundImage: './assets/android-icon-foreground.png',
