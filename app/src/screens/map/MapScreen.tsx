@@ -28,8 +28,9 @@ export default function MapScreen() {
     filterStatus, setFilterStatus,
     selectedTreeId, setSelectedTree,
     isAddingTree, setIsAddingTree,
+    isSuggestingTree, setIsSuggestingTree,
     pendingPin, setPendingPin,
-    trees, addTree,
+    trees, addTree, addSuggestedTree,
   } = useMapStore();
   const user = useAuthStore((s) => s.user);
   const [search, setSearch] = useState('');
@@ -47,25 +48,30 @@ export default function MapScreen() {
   const selectedTree = filtered.find((t) => t.id === selectedTreeId) || (filtered.length > 0 ? filtered[0] : null);
 
   const handleMarkerPress = useCallback((tree: { id: string }) => {
-    if (!isAddingTree) {
+    if (!isAddingTree && !isSuggestingTree) {
       setSelectedTree(tree.id);
     }
-  }, [isAddingTree, setSelectedTree]);
+  }, [isAddingTree, isSuggestingTree, setSelectedTree]);
 
   const handleMapClick = useCallback((coords: { lat: number; lng: number }) => {
-    if (isAddingTree) {
+    if (isAddingTree || isSuggestingTree) {
       setPendingPin(coords);
     }
-  }, [isAddingTree, setPendingPin]);
+  }, [isAddingTree, isSuggestingTree, setPendingPin]);
 
   const handleToggleAddMode = () => {
-    if (isAddingTree) {
-      // Cancel adding mode
+    if (isAddingTree || isSuggestingTree) {
+      // Cancel adding/suggesting mode
       setIsAddingTree(false);
+      setIsSuggestingTree(false);
       setPendingPin(null);
     } else {
-      // Enter adding mode
-      setIsAddingTree(true);
+      // Enter adding/suggesting mode
+      if (isAdmin) {
+        setIsAddingTree(true);
+      } else {
+        setIsSuggestingTree(true);
+      }
       setSelectedTree(null);
     }
   };
@@ -92,7 +98,12 @@ export default function MapScreen() {
       lng: data.lng,
       distanceM: 0,
     };
-    addTree(newTree);
+    if (isAddingTree) {
+      addTree(newTree);
+    } else if (isSuggestingTree) {
+      addSuggestedTree(newTree);
+      Alert.alert('Başarılı', 'Ağaç öneriniz alındı. Admin onayından sonra haritada görünecektir.');
+    }
     setShowAddModal(false);
   };
 
@@ -113,8 +124,8 @@ export default function MapScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Admin add-tree banner */}
-      {isAddingTree && (
+      {/* Add/Suggest banner */}
+      {(isAddingTree || isSuggestingTree) && (
         <View style={styles.addBanner}>
           <Text style={styles.addBannerIcon}>📌</Text>
           <Text style={styles.addBannerText}>
@@ -124,7 +135,7 @@ export default function MapScreen() {
       )}
 
       {/* Search */}
-      {!isAddingTree && (
+      {!(isAddingTree || isSuggestingTree) && (
         <View style={styles.searchRow}>
           <View style={styles.searchBox}>
             <Text style={styles.searchIcon}>🔍</Text>
@@ -140,7 +151,7 @@ export default function MapScreen() {
       )}
 
       {/* Filter chips */}
-      {!isAddingTree && (
+      {!(isAddingTree || isSuggestingTree) && (
         <ScrollView 
           horizontal 
           showsHorizontalScrollIndicator={true} 
@@ -170,13 +181,13 @@ export default function MapScreen() {
             onMarkerPress={handleMarkerPress}
             initialCenter={INITIAL_CENTER}
             initialZoom={INITIAL_ZOOM}
-            isAddingTree={isAddingTree}
+            isAddingTree={isAddingTree || isSuggestingTree}
             pendingPin={pendingPin}
             onMapClick={handleMapClick}
           />
 
-          {/* Bottom preview card — only when NOT adding */}
-          {!isAddingTree && selectedTree && (
+          {/* Bottom preview card — only when NOT adding/suggesting */}
+          {!(isAddingTree || isSuggestingTree) && selectedTree && (
             <TouchableOpacity
               style={styles.previewCard}
               onPress={() => navigation.navigate('TreeDetail', { treeId: selectedTree.id })}
@@ -197,7 +208,7 @@ export default function MapScreen() {
           )}
 
           {/* Pending pin confirm card */}
-          {isAddingTree && pendingPin && (
+          {(isAddingTree || isSuggestingTree) && pendingPin && (
             <View style={styles.confirmCard}>
               <View style={styles.confirmInfo}>
                 <Text style={styles.confirmTitle}>📍 Konum Seçildi</Text>
@@ -212,17 +223,17 @@ export default function MapScreen() {
             </View>
           )}
 
-          {/* Admin FAB — add tree toggle */}
-          {isAdmin && viewMode === 'map' && (
+          {/* FAB — add/suggest tree toggle */}
+          {viewMode === 'map' && (
             <TouchableOpacity
               style={[
                 styles.fab,
-                isAddingTree && styles.fabCancel,
+                (isAddingTree || isSuggestingTree) && styles.fabCancel,
               ]}
               onPress={handleToggleAddMode}
             >
               <Text style={styles.fabText}>
-                {isAddingTree ? '✕' : '＋'}
+                {(isAddingTree || isSuggestingTree) ? '✕' : (isAdmin ? '＋' : '🌟')}
               </Text>
             </TouchableOpacity>
           )}

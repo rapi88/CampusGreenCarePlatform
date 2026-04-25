@@ -19,13 +19,14 @@ async function checkOverdueTrees(): Promise<void> {
       },
       adoptions: {
         include: {
-          user: { select: { expoPushToken: true } },
+          user: { select: { id: true, expoPushToken: true } },
         },
       },
     },
   });
 
   let notifiedCount = 0;
+  let droppedCount = 0;
 
   for (const tree of trees) {
     const lastWatered = tree.wateringEvents[0]?.createdAt;
@@ -33,8 +34,24 @@ async function checkOverdueTrees(): Promise<void> {
       ? (Date.now() - lastWatered.getTime()) / 86_400_000
       : Infinity;
 
-    // Send notifications if watering is overdue or due soon
-    if (daysSince >= tree.wateringPeriodDays - 1) {
+    // Auto-drop volunteers if missed 2 waterings (daysSince >= wateringPeriodDays * 2)
+    if (daysSince >= tree.wateringPeriodDays * 2) {
+      if (tree.adoptions.length > 0) {
+        await prisma.adoption.deleteMany({
+          where: { treeId: tree.id },
+        });
+        droppedCount += tree.adoptions.length;
+        // Optionally send a notification about being dropped
+        const tokens = tree.adoptions
+          .map((a) => a.user.expoPushToken)
+          .filter((token): token is string => !!token);
+        if (tokens.length > 0) {
+          // notificationService.sendDropNotification(tree.name, tree.id, tokens);
+        }
+      }
+    } 
+    // Send notifications if watering is overdue or due soon (and not dropped)
+    else if (daysSince >= tree.wateringPeriodDays - 1) {
       const tokens = tree.adoptions
         .map((a) => a.user.expoPushToken)
         .filter((token): token is string => !!token);
@@ -46,7 +63,7 @@ async function checkOverdueTrees(): Promise<void> {
     }
   }
 
-  console.log(`[Scheduler] Sent ${notifiedCount} watering reminders`);
+  console.log(`[Scheduler] Sent ${notifiedCount} watering reminders, dropped ${droppedCount} adoptions`);
 }
 
 export const schedulerService = {

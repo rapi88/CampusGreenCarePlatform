@@ -7,9 +7,11 @@ const router = Router();
 
 // Public endpoints
 router.get('/', treeController.getAll);
+router.get('/award', treeController.getAwardUrl);
 router.get('/:id', treeController.getById);
 
 // Authenticated endpoints
+router.post('/suggest', auth, treeController.suggest);
 router.post('/:id/adopt', auth, treeController.adopt);
 router.delete('/:id/adopt', auth, treeController.leaveAdoption);
 router.post('/:id/water', auth, treeController.water);

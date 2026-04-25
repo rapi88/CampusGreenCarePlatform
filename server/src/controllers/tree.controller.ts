@@ -3,13 +3,35 @@ import { Request, Response, NextFunction } from 'express';
 import { treeService } from '../services/tree.service';
 import { adoptionService } from '../services/adoption.service';
 import { wateringService } from '../services/watering.service';
+import { prisma } from '../config/database';
 
 export const treeController = {
   async getAll(req: Request, res: Response, next: NextFunction) {
     try {
       const status = req.query.status as string | undefined;
-      const trees = await treeService.getAll(status as any);
+      const trees = await treeService.getAll(status as any, true);
       res.json(trees);
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async suggest(req: Request, res: Response, next: NextFunction) {
+    try {
+      const data = req.body;
+      const tree = await treeService.suggest(data);
+      res.status(201).json(tree);
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async getAwardUrl(req: Request, res: Response, next: NextFunction) {
+    try {
+      const setting = await prisma.setting.findUnique({
+        where: { key: 'AWARD_URL' },
+      });
+      res.json({ url: setting?.value || null });
     } catch (error) {
       next(error);
     }

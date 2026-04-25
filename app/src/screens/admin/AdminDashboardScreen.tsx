@@ -1,11 +1,12 @@
 // Admin Dashboard
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Colors } from '../../theme/colors';
 import { Spacing, Radius, Shadow } from '../../theme/spacing';
 import { useAuthStore } from '../../store/auth.store';
+import { useAwardStore } from '../../store/award.store';
 
 const STATS = [
   { label: 'Toplam Ağaç', value: '128', icon: '🌳' },
@@ -17,6 +18,9 @@ const STATS = [
 export default function AdminDashboardScreen() {
   const navigation = useNavigation<any>();
   const { clearAuth } = useAuthStore();
+  const { topWatererPhotoUrl, setTopWatererPhotoUrl, awardText, setAwardText } = useAwardStore();
+  const [awardUrl, setAwardUrl] = React.useState(topWatererPhotoUrl || '');
+  const [localAwardText, setLocalAwardText] = React.useState(awardText || '');
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -41,6 +45,7 @@ export default function AdminDashboardScreen() {
 
         {/* Quick actions */}
         {[
+          { icon: '🌟 Ağaç Önerileri', screen: 'AdminTreeSuggestions', params: {} },
           { icon: '+ Ağaç Ekle', screen: 'AdminAddEditTree', params: {} },
           { icon: '🌳 Ağaç Listesi', screen: 'AdminTreeList', params: {} },
           { icon: '📊 Sulama Raporları', screen: 'AdminReports', params: {} },
@@ -51,6 +56,34 @@ export default function AdminDashboardScreen() {
             <Text style={styles.actionArrow}>›</Text>
           </TouchableOpacity>
         ))}
+        <Text style={[styles.sectionTitle, { marginTop: Spacing.md }]}>Haftanın Ödülü</Text>
+        <View style={styles.awardBox}>
+          <View style={styles.awardInputs}>
+            <TextInput
+              style={styles.awardInput}
+              placeholder="Fotoğraf URL'sini yapıştırın..."
+              value={awardUrl}
+              onChangeText={setAwardUrl}
+            />
+            <TextInput
+              style={styles.awardInput}
+              placeholder="Ödül üzerine yazılacak metin..."
+              value={localAwardText}
+              onChangeText={setLocalAwardText}
+            />
+          </View>
+          <TouchableOpacity
+            style={styles.awardSaveBtn}
+            onPress={() => {
+              setTopWatererPhotoUrl(awardUrl);
+              setAwardText(localAwardText);
+              alert('Ödül güncellendi!');
+            }}
+          >
+            <Text style={styles.awardSaveText}>Kaydet</Text>
+          </TouchableOpacity>
+        </View>
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -77,4 +110,26 @@ const styles = StyleSheet.create({
   },
   actionBtnText: { flex: 1, fontSize: 15, fontWeight: '600', color: Colors.neutralDark },
   actionArrow: { fontSize: 22, color: Colors.neutralLight },
+  awardBox: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginBottom: Spacing.lg,
+  },
+  awardInputs: {
+    flex: 1,
+    gap: Spacing.xs,
+  },
+  awardInput: {
+    backgroundColor: Colors.white,
+    padding: Spacing.sm,
+    borderRadius: Radius.md,
+    ...Shadow.card,
+  },
+  awardSaveBtn: {
+    backgroundColor: Colors.greenPrimary,
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radius.md,
+  },
+  awardSaveText: { color: Colors.white, fontWeight: '600' },
 });
