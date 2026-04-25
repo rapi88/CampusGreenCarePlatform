@@ -15,6 +15,14 @@ router.post('/trees', upload.single('photo'), adminController.createTree);
 router.put('/trees/:id', upload.single('photo'), adminController.updateTree);
 router.delete('/trees/:id', adminController.deleteTree);
 
+// Tree Suggestions
+router.get('/trees/suggestions', adminController.getSuggestions);
+router.post('/trees/:id/approve', adminController.approveSuggestion);
+router.post('/trees/:id/reject', adminController.rejectSuggestion);
+
+// Award
+router.post('/award', adminController.setAwardUrl);
+
 // Reports
 router.get('/reports/watering', adminController.getWateringReport);
 

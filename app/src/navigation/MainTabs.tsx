@@ -17,6 +17,7 @@ import ProfileScreen from '../screens/profile/ProfileScreen';
 import EditProfileScreen from '../screens/profile/EditProfileScreen';
 import LeaderboardScreen from '../screens/profile/LeaderboardScreen';
 import NotificationSettingsScreen from '../screens/profile/NotificationSettingsScreen';
+import AwardsScreen from '../screens/profile/AwardsScreen';
 
 // Admin screens
 import AdminDashboardScreen from '../screens/admin/AdminDashboardScreen';
@@ -24,6 +25,7 @@ import AdminTreeListScreen from '../screens/admin/AdminTreeListScreen';
 import AdminAddEditTreeScreen from '../screens/admin/AdminAddEditTreeScreen';
 import AdminReportsScreen from '../screens/admin/AdminReportsScreen';
 import AdminUserManagementScreen from '../screens/admin/AdminUserManagementScreen';
+import AdminTreeSuggestionsScreen from '../screens/admin/AdminTreeSuggestionsScreen';
 
 export type TreeStackParamList = {
   TreeDetail: { treeId: string };
@@ -36,6 +38,7 @@ export type TreeStackParamList = {
 export type MainTabsParamList = {
   MapTab: undefined;
   MyTreesTab: undefined;
+  AwardsTab: undefined;
   ProfileTab: undefined;
   AdminTab?: undefined;
 };
@@ -47,6 +50,7 @@ export type AppStackParamList = TreeStackParamList & {
   AdminAddEditTree: { treeId?: string };
   AdminReports: undefined;
   AdminUserManagement: undefined;
+  AdminTreeSuggestions: undefined;
 };
 
 const Tab = createBottomTabNavigator<MainTabsParamList>();
@@ -84,6 +88,7 @@ function TabNavigator() {
           const labels: Record<string, string> = {
             MapTab: 'Harita',
             MyTreesTab: 'Ağaçlarım',
+            AwardsTab: 'Ödüller',
             ProfileTab: 'Profil',
             AdminTab: 'Admin',
           };
@@ -97,6 +102,7 @@ function TabNavigator() {
           const icons: Record<string, string> = {
             MapTab: '🗺️',
             MyTreesTab: '🌲',
+            AwardsTab: '🏆',
             ProfileTab: '👤',
             AdminTab: '⚙️',
           };
@@ -106,6 +112,7 @@ function TabNavigator() {
     >
       <Tab.Screen name="MapTab" component={MapScreen} />
       <Tab.Screen name="MyTreesTab" component={MyTreesScreen} />
+      <Tab.Screen name="AwardsTab" component={AwardsScreen} />
       <Tab.Screen name="ProfileTab" component={ProfileNavigator} />
       {isAdmin && (
         <Tab.Screen name="AdminTab" component={AdminDashboardScreen} />
@@ -128,6 +135,7 @@ export default function MainTabs() {
       <AppStack.Screen name="AdminAddEditTree" component={AdminAddEditTreeScreen} />
       <AppStack.Screen name="AdminReports" component={AdminReportsScreen} />
       <AppStack.Screen name="AdminUserManagement" component={AdminUserManagementScreen} />
+      <AppStack.Screen name="AdminTreeSuggestions" component={AdminTreeSuggestionsScreen} />
     </AppStack.Navigator>
   );
 }
