@@ -1,7 +1,7 @@
-// Admin controller — tree CRUD, reports, user management
 import { Request, Response, NextFunction } from 'express';
 import { treeService } from '../services/tree.service';
 import { reportService } from '../services/report.service';
+import { prisma } from '../config/database';
 
 export const adminController = {
   // ── Tree CRUD ──────────────────────────────────────────
@@ -43,6 +43,53 @@ export const adminController = {
       const id = req.params.id as string;
       const result = await treeService.delete(id);
       res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // ── Suggestions ──────────────────────────────────────────
+
+  async getSuggestions(req: Request, res: Response, next: NextFunction) {
+    try {
+      const trees = await treeService.getAll(undefined, false); // Get unapproved
+      res.json(trees);
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async approveSuggestion(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = req.params.id as string;
+      const tree = await treeService.approve(id);
+      res.json(tree);
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async rejectSuggestion(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = req.params.id as string;
+      const result = await treeService.delete(id);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  // ── Award Settings ───────────────────────────────────────
+
+  async setAwardUrl(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { url } = req.body;
+      const setting = await prisma.setting.upsert({
+        where: { key: 'AWARD_URL' },
+        update: { value: url },
+        create: { key: 'AWARD_URL', value: url },
+      });
+      res.json(setting);
     } catch (error) {
       next(error);
     }

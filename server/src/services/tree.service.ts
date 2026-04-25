@@ -28,8 +28,9 @@ function buildPhotoUrl(photoPath: string | null): string | undefined {
 }
 
 export const treeService = {
-  async getAll(statusFilter?: TreeStatus) {
+  async getAll(statusFilter?: TreeStatus, isApproved: boolean = true) {
     const trees = await prisma.tree.findMany({
+      where: { isApproved },
       include: {
         wateringEvents: {
           orderBy: { createdAt: 'desc' },
@@ -170,10 +171,40 @@ export const treeService = {
         isNaturalMonument: data.isNaturalMonument || false,
         health: healthEnum,
         maxVolunteers: data.maxVolunteers || 4,
+        isApproved: true,
       },
     });
 
     return this.getById(tree.id);
+  },
+
+  async suggest(data: {
+    name: string;
+    species: string;
+    latitude: number;
+    longitude: number;
+    location: string;
+  }) {
+    const tree = await prisma.tree.create({
+      data: {
+        name: data.name,
+        species: data.species,
+        latitude: data.latitude,
+        longitude: data.longitude,
+        location: data.location,
+        isApproved: false,
+      },
+    });
+
+    return tree;
+  },
+
+  async approve(id: string) {
+    await prisma.tree.update({
+      where: { id },
+      data: { isApproved: true },
+    });
+    return this.getById(id);
   },
 
   async update(id: string, data: Partial<{
