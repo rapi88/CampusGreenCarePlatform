@@ -1,6 +1,6 @@
 // Admin Tree List
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Colors } from '../../theme/colors';
@@ -16,7 +16,16 @@ const MOCK = [
 export default function AdminTreeListScreen() {
   const navigation = useNavigation<any>();
   const [search, setSearch] = useState('');
-  const filtered = MOCK.filter((t) => t.name.toLowerCase().includes(search.toLowerCase()));
+  const [trees, setTrees] = useState(MOCK);
+
+  const handleDelete = (id: string, name: string) => {
+    Alert.alert('Emin misiniz?', `${name} adlı ağacı silmek istediğinize emin misiniz?`, [
+      { text: 'İptal', style: 'cancel' },
+      { text: 'Sil', style: 'destructive', onPress: () => setTrees(prev => prev.filter(t => t.id !== id)) }
+    ]);
+  };
+
+  const filtered = trees.filter((t) => t.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -45,9 +54,14 @@ export default function AdminTreeListScreen() {
             </View>
             <View style={styles.rowActions}>
               <StatusChip status={item.status} size="sm" />
-              <TouchableOpacity onPress={() => navigation.navigate('AdminAddEditTree', { treeId: item.id })} style={styles.editBtn}>
-                <Text style={styles.editText}>Düzenle</Text>
-              </TouchableOpacity>
+              <View style={styles.actionBtns}>
+                <TouchableOpacity onPress={() => navigation.navigate('AdminAddEditTree', { treeId: item.id })} style={styles.editBtn}>
+                  <Text style={styles.editText}>Düzenle</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => handleDelete(item.id, item.name)} style={styles.deleteBtn}>
+                  <Text style={styles.deleteText}>Sil</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         )}
@@ -72,6 +86,9 @@ const styles = StyleSheet.create({
   rowSpecies: { fontSize: 12, color: Colors.neutralMid, fontStyle: 'italic' },
   rowLoc: { fontSize: 12, color: Colors.neutralMid, marginTop: 2 },
   rowActions: { alignItems: 'flex-end', gap: 8 },
+  actionBtns: { flexDirection: 'row', gap: 8 },
   editBtn: { backgroundColor: Colors.greenLight, paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.sm },
   editText: { color: Colors.greenDark, fontWeight: '600', fontSize: 13 },
+  deleteBtn: { backgroundColor: Colors.errorLight, paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.sm },
+  deleteText: { color: Colors.error, fontWeight: '600', fontSize: 13 },
 });

@@ -57,6 +57,7 @@ model Tree {
   height             Float    @default(0)
   plantingDate       DateTime?
   wateringPeriodDays Int      @default(3)
+  isApproved         Boolean  @default(true)
   isNaturalMonument  Boolean  @default(false)
   health             Health   @default(HEALTHY)
   maxVolunteers      Int      @default(4)
@@ -142,4 +143,9 @@ model IssueReport {
 
   @@index([treeId])
   @@index([resolved])
+}
+
+model Setting {
+  key   String @id
+  value String
 }

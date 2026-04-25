@@ -1,6 +1,6 @@
 // My Trees screen — list of adopted trees
-import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { Colors } from '../../theme/colors';
@@ -8,23 +8,45 @@ import { Spacing, Radius, Shadow } from '../../theme/spacing';
 import StatusChip from '../../components/common/StatusChip';
 import { relativeTime } from '../../utils/formatters';
 
-const MOCK_MY_TREES = [
-  { id: '1', name: 'Ak Meşe', location: 'Merkezi Avlu', status: 'needs_water' as const, lastWateredAt: new Date(Date.now() - 3 * 86400000).toISOString(), health: 'Sağlıklı' as const },
-  { id: '3', name: 'Sedir #17', location: 'Mühendislik Binası', status: 'due_soon' as const, lastWateredAt: new Date(Date.now() - 86400000).toISOString(), health: 'Sağlıklı' as const },
+const INITIAL_TREES = [
+  { id: '1', name: 'Ak Meşe', location: 'Merkezi Avlu', status: 'needs_water' as const, lastWateredAt: new Date(Date.now() - 3 * 86400000).toISOString(), health: 'Sağlıklı' as const, missedWaterings: 0 },
+  { id: '3', name: 'Sedir #17', location: 'Mühendislik Binası', status: 'due_soon' as const, lastWateredAt: new Date(Date.now() - 86400000).toISOString(), health: 'Sağlıklı' as const, missedWaterings: 0 },
 ];
 
 export default function MyTreesScreen() {
   const navigation = useNavigation<any>();
+  const [myTrees, setMyTrees] = useState(INITIAL_TREES);
+
+  const handleLeave = (id: string, name: string) => {
+    Alert.alert('Emin misiniz?', `${name} ağacının sorumluluğunu bırakmak istiyor musunuz?`, [
+      { text: 'İptal', style: 'cancel' },
+      { text: 'Bırak', style: 'destructive', onPress: () => setMyTrees(prev => prev.filter(t => t.id !== id)) }
+    ]);
+  };
+
+  const handleSimulateMiss = (id: string, name: string) => {
+    setMyTrees(prev => prev.map(t => {
+      if (t.id === id) {
+        const newMissed = t.missedWaterings + 1;
+        if (newMissed >= 2) {
+          Alert.alert('Sorumluluk Düştü', `${name} ağacı için 2 devamsızlık yaptığınız için ağaç sorumluluğunuzdan düşürüldü.`);
+          return { ...t, shouldDrop: true };
+        }
+        return { ...t, missedWaterings: newMissed };
+      }
+      return t;
+    }).filter(t => !(t as any).shouldDrop));
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>🌲 Ağaçlarım</Text>
-        <Text style={styles.subtitle}>{MOCK_MY_TREES.length}/10 ağaç sahiplenildi</Text>
+        <Text style={styles.subtitle}>{myTrees.length}/10 ağaç sahiplenildi</Text>
       </View>
 
       <FlatList
-        data={MOCK_MY_TREES}
+        data={myTrees}
         keyExtractor={(t) => t.id}
         contentContainerStyle={styles.list}
         renderItem={({ item }) => (
@@ -42,8 +64,16 @@ export default function MyTreesScreen() {
               </View>
               <Text style={styles.cardLoc}>📍 {item.location}</Text>
               <Text style={styles.cardWatered}>💧 {relativeTime(item.lastWateredAt)}</Text>
+              <Text style={styles.missedText}>Devamsızlık: {item.missedWaterings}/2</Text>
             </View>
-            <Text style={styles.arrow}>›</Text>
+            <View style={styles.cardActions}>
+              <TouchableOpacity style={styles.simBtn} onPress={() => handleSimulateMiss(item.id, item.name)}>
+                <Text style={styles.simText}>+1 Devam</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.leaveBtn} onPress={() => handleLeave(item.id, item.name)}>
+                <Text style={styles.leaveText}>Sil</Text>
+              </TouchableOpacity>
+            </View>
           </TouchableOpacity>
         )}
         ListEmptyComponent={
@@ -78,7 +108,12 @@ const styles = StyleSheet.create({
   cardName: { fontSize: 16, fontWeight: '700', color: Colors.neutralDark, flex: 1, marginRight: 8 },
   cardLoc: { fontSize: 12, color: Colors.neutralMid, marginBottom: 2 },
   cardWatered: { fontSize: 12, color: Colors.neutralMid },
-  arrow: { fontSize: 24, color: Colors.neutralLight, marginLeft: 8 },
+  missedText: { fontSize: 12, color: Colors.error, marginTop: 4, fontWeight: '500' },
+  cardActions: { alignItems: 'flex-end', justifyContent: 'space-between', paddingVertical: 4 },
+  leaveBtn: { backgroundColor: Colors.errorLight, paddingHorizontal: 12, paddingVertical: 6, borderRadius: Radius.sm },
+  leaveText: { color: Colors.error, fontWeight: '700', fontSize: 12 },
+  simBtn: { backgroundColor: Colors.neutralLight, paddingHorizontal: 12, paddingVertical: 6, borderRadius: Radius.sm, marginBottom: 8 },
+  simText: { color: Colors.neutralDark, fontWeight: '600', fontSize: 11 },
   empty: { alignItems: 'center', paddingTop: 80, paddingHorizontal: Spacing.xl },
   emptyEmoji: { fontSize: 60, marginBottom: Spacing.md },
   emptyTitle: { fontSize: 18, fontWeight: '700', color: Colors.neutralDark, marginBottom: 8, textAlign: 'center' },
