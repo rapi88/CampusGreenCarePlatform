@@ -16,14 +16,14 @@ export default function EditProfileScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.back}>‹ Geri</Text></TouchableOpacity>
-        <Text style={styles.headerTitle}>Profili Düzenle</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.back}>‹ Back</Text></TouchableOpacity>
+        <Text style={styles.headerTitle}>Edit Profile</Text>
         <View style={{ width: 60 }} />
       </View>
       <View style={styles.body}>
-        <FormInput label="Ad Soyad" value={name} onChangeText={setName} />
-        <TouchableOpacity style={styles.saveBtn}>
-          <Text style={styles.saveBtnText}>Kaydet</Text>
+        <FormInput label="Full Name" value={name} onChangeText={setName} />
+        <TouchableOpacity style={styles.saveBtn} onPress={() => navigation.goBack()}>
+          <Text style={styles.saveBtnText}>Save</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

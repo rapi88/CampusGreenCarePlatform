@@ -1,35 +1,52 @@
 // Profile screen
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useQuery } from '@tanstack/react-query';
 import { Colors } from '../../theme/colors';
 import { Spacing, Radius, Shadow } from '../../theme/spacing';
 import { useAuthStore } from '../../store/auth.store';
+import { treesApi } from '../../api/trees.api';
 
 const MENU_ITEMS = [
-  { icon: '✏️', label: 'Profili Düzenle', screen: 'EditProfile' },
-  { icon: '🔔', label: 'Bildirim Ayarları', screen: 'NotificationSettings' },
-  { icon: '🏆', label: 'Liderlik Tablosu', screen: 'Leaderboard' },
+  { icon: '✏️', label: 'Edit Profile', screen: 'EditProfile' },
+  { icon: '🔔', label: 'Notification Settings', screen: 'NotificationSettings' },
+  { icon: '🏆', label: 'Leaderboard', screen: 'Leaderboard' },
 ];
 
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();
   const { user, clearAuth } = useAuthStore();
 
-  const handleLogout = () => {
-    Alert.alert('Çıkış Yap', 'Çıkış yapmak istediğinize emin misiniz?', [
-      { text: 'İptal', style: 'cancel' },
-      {
-        text: 'Çıkış Yap', style: 'destructive',
-        onPress: async () => { await AsyncStorage.removeItem('token'); clearAuth(); }
-      },
-    ]);
+  const { data: myTreesResponse } = useQuery({
+    queryKey: ['my-trees'],
+    queryFn: () => treesApi.getMyTrees(),
+  });
+
+  const adoptedTreesCount = myTreesResponse?.data?.adopted?.length || 0;
+
+  const handleLogout = async () => {
+    if (Platform.OS === 'web') {
+      const confirm = window.confirm('Are you sure you want to log out?');
+      if (confirm) {
+        await AsyncStorage.removeItem('token');
+        clearAuth();
+      }
+    } else {
+      Alert.alert('Logout', 'Are you sure you want to log out?', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout', style: 'destructive',
+          onPress: async () => { await AsyncStorage.removeItem('token'); clearAuth(); }
+        },
+      ]);
+    }
   };
 
-  const displayName = user?.name ?? 'Kullanıcı';
-  const displayEmail = user?.email ?? 'kullanici@gtu.edu.tr';
+  const displayName = user?.name ?? 'User';
+  const displayEmail = user?.email ?? 'user@gtu.edu.tr';
   const initial = displayName.charAt(0).toUpperCase();
 
   return (
@@ -45,18 +62,18 @@ export default function ProfileScreen() {
         {/* Stats */}
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{user?.adoptedTreeIds?.length ?? 2}</Text>
-            <Text style={styles.statLabel}>Ağaç Sahiplendi</Text>
+            <Text style={styles.statValue}>{adoptedTreesCount}</Text>
+            <Text style={styles.statLabel}>Adopted Trees</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statValue}>14</Text>
-            <Text style={styles.statLabel}>Sulama Yapıldı</Text>
+            <Text style={styles.statLabel}>Waterings Done</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{user?.points ?? 140} 🏆</Text>
-            <Text style={styles.statLabel}>Puan</Text>
+            <Text style={styles.statValue}>{user?.points ?? 0} 🏆</Text>
+            <Text style={styles.statLabel}>Points</Text>
           </View>
         </View>
 
@@ -77,7 +94,7 @@ export default function ProfileScreen() {
 
         {/* Logout */}
         <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-          <Text style={styles.logoutText}>🚪 Çıkış Yap</Text>
+          <Text style={styles.logoutText}>🚪 Logout</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>

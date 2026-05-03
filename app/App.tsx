@@ -3,6 +3,7 @@ import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native';
+import Toast from 'react-native-toast-message';
 import RootNavigator from './src/navigation/RootNavigator';
 
 const queryClient = new QueryClient({
@@ -16,6 +17,7 @@ export default function App() {
     <GestureHandlerRootView style={styles.root}>
       <QueryClientProvider client={queryClient}>
         <RootNavigator />
+        <Toast />
       </QueryClientProvider>
     </GestureHandlerRootView>
   );

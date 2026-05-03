@@ -10,7 +10,7 @@ export const chatController = {
 
       // Verify tree exists
       const tree = await prisma.tree.findUnique({ where: { id: treeId } });
-      if (!tree) throw new NotFoundError('Ağaç bulunamadı');
+      if (!tree) throw new NotFoundError('Tree not found');
 
       const messages = await prisma.chatMessage.findMany({
         where: { treeId },
@@ -44,7 +44,7 @@ export const chatController = {
 
       // Verify tree exists
       const tree = await prisma.tree.findUnique({ where: { id: treeId } });
-      if (!tree) throw new NotFoundError('Ağaç bulunamadı');
+      if (!tree) throw new NotFoundError('Tree not found');
 
       const message = await prisma.chatMessage.create({
         data: {

@@ -18,7 +18,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
 
   const handleReset = async () => {
     if (!isGTUEmail(email)) {
-      setEmailError('Geçerli bir GTU e-postası girin');
+      setEmailError('Enter a valid GTU email');
       return;
     }
     setEmailError('');
@@ -27,7 +27,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
       await authApi.forgotPassword(email);
       setSent(true);
     } catch {
-      Alert.alert('Hata', 'Şifre sıfırlama isteği gönderilemedi.');
+      Alert.alert('Error', 'Failed to send password reset request.');
     } finally {
       setLoading(false);
     }
@@ -36,21 +36,21 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
   return (
     <View style={styles.container}>
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
-        <Text style={styles.backText}>← Geri</Text>
+        <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
 
       <View style={styles.content}>
         <Text style={styles.icon}>🔐</Text>
-        <Text style={styles.title}>Şifremi Unuttum</Text>
+        <Text style={styles.title}>Forgot Password</Text>
         <Text style={styles.desc}>
-          GTU e-posta adresinizi girin, şifre sıfırlama bağlantısı göndereceğiz.
+          Enter your GTU email address, we will send you a password reset link.
         </Text>
 
         {!sent ? (
           <>
             <FormInput
-              label="GTU E-posta"
-              placeholder="ad.soyad@gtu.edu.tr"
+              label="GTU Email"
+              placeholder="name.surname@gtu.edu.tr"
               keyboardType="email-address"
               value={email}
               onChangeText={setEmail}
@@ -64,7 +64,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
               {loading ? (
                 <ActivityIndicator color={Colors.white} />
               ) : (
-                <Text style={styles.btnText}>Şifre Sıfırla</Text>
+                <Text style={styles.btnText}>Reset Password</Text>
               )}
             </TouchableOpacity>
           </>
@@ -72,10 +72,10 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
           <View style={styles.successBox}>
             <Text style={styles.successEmoji}>✅</Text>
             <Text style={styles.successText}>
-              Bağlantı gönderildi! Mail kutunuzu kontrol edin.
+              Link sent! Check your inbox.
             </Text>
             <TouchableOpacity style={styles.btn} onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.btnText}>Giriş Yap</Text>
+              <Text style={styles.btnText}>Login</Text>
             </TouchableOpacity>
           </View>
         )}

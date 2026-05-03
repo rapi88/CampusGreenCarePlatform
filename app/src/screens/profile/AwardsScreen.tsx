@@ -3,10 +3,17 @@ import { View, Text, StyleSheet, Image, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../../theme/colors';
 import { Spacing, Radius, Shadow } from '../../theme/spacing';
-import { useAwardStore } from '../../store/award.store';
+import { useQuery } from '@tanstack/react-query';
+import { awardApi } from '../../api/award.api';
 
 export default function AwardsScreen() {
-  const { topWatererPhotoUrl, awardText } = useAwardStore();
+  const { data: awardResp, isLoading } = useQuery({
+    queryKey: ['weeklyAward'],
+    queryFn: () => awardApi.getWeeklyAward()
+  });
+  
+  const topWatererPhotoUrl = awardResp?.data?.photoUrl;
+  const awardText = awardResp?.data?.text;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>

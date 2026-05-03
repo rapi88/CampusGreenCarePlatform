@@ -1,72 +1,89 @@
 // Notes screen — per-tree notes list
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, TextInput, KeyboardAvoidingView, Platform,
+  View, Text, StyleSheet, FlatList, TouchableOpacity, Modal, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import Toast from 'react-native-toast-message';
 import { Colors } from '../../theme/colors';
 import { Spacing, Radius, Shadow } from '../../theme/spacing';
 import { relativeTime } from '../../utils/formatters';
 import { TreeStackParamList } from '../../navigation/MainTabs';
+import { notesApi } from '../../api/notes.api';
 
 type Props = NativeStackScreenProps<TreeStackParamList, 'Notes'>;
 
-interface Note { id: string; userId: string; userName: string; initial: string; text: string; createdAt: string; }
-
-const MOCK_NOTES: Note[] = [
-  { id: '1', userId: 'u1', userName: 'Mehmet Y.', initial: 'MY', text: 'Yaprakların ucunda sararma başladı, dikkat edilmeli.', createdAt: new Date(Date.now() - 2 * 86400000).toISOString() },
-  { id: '2', userId: 'u2', userName: 'Zeynep K.', initial: 'ZK', text: 'Gövdesinin kuzey tarafında bir çatlak var, admin bilgilendirilmeli.', createdAt: new Date(Date.now() - 86400000).toISOString() },
-];
-
 export default function NotesScreen({ route, navigation }: Props) {
   const { treeId, treeName } = route.params;
-  const [notes, setNotes] = useState<Note[]>(MOCK_NOTES);
+  const queryClient = useQueryClient();
   const [modalVisible, setModalVisible] = useState(false);
   const [newNoteText, setNewNoteText] = useState('');
 
+  const { data: notesResponse, isLoading } = useQuery({
+    queryKey: ['tree', treeId, 'notes'],
+    queryFn: () => notesApi.getNotes(treeId),
+  });
+
+  const addNoteMutation = useMutation({
+    mutationFn: (text: string) => notesApi.addNote(treeId, text),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tree', treeId, 'notes'] });
+      setNewNoteText('');
+      setModalVisible(false);
+      Toast.show({ type: 'success', text1: 'Success', text2: 'Note added.' });
+    },
+    onError: () => {
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to add note.' });
+    }
+  });
+
+  const notes = notesResponse?.data || [];
+
   const addNote = () => {
     if (!newNoteText.trim()) return;
-    setNotes((n) => [
-      ...n,
-      { id: Date.now().toString(), userId: 'me', userName: 'Sen', initial: 'BN', text: newNoteText.trim(), createdAt: new Date().toISOString() },
-    ]);
-    setNewNoteText('');
-    setModalVisible(false);
+    addNoteMutation.mutate(newNoteText.trim());
   };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.back}>‹ Geri</Text></TouchableOpacity>
-        <Text style={styles.headerTitle}>{treeName} — Notlar</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.back}>‹ Back</Text></TouchableOpacity>
+        <Text style={styles.headerTitle}>{treeName} — Notes</Text>
         <View style={{ width: 60 }} />
       </View>
 
-      <FlatList
-        data={notes}
-        keyExtractor={(n) => n.id}
-        contentContainerStyle={styles.list}
-        renderItem={({ item }) => (
-          <View style={styles.noteCard}>
-            <View style={styles.noteHeader}>
-              <View style={styles.avatarCircle}><Text style={styles.avatarInitial}>{item.initial}</Text></View>
-              <View style={styles.noteMeta}>
-                <Text style={styles.noteName}>{item.userName}</Text>
-                <Text style={styles.noteTime}>{relativeTime(item.createdAt)}</Text>
+      {isLoading ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={Colors.greenPrimary} />
+        </View>
+      ) : (
+        <FlatList
+          data={notes}
+          keyExtractor={(n) => n.id}
+          contentContainerStyle={styles.list}
+          renderItem={({ item }) => (
+            <View style={styles.noteCard}>
+              <View style={styles.noteHeader}>
+                <View style={styles.avatarCircle}><Text style={styles.avatarInitial}>{item.userName?.charAt(0) || 'U'}</Text></View>
+                <View style={styles.noteMeta}>
+                  <Text style={styles.noteName}>{item.userName}</Text>
+                  <Text style={styles.noteTime}>{relativeTime(item.createdAt)}</Text>
+                </View>
               </View>
+              <Text style={styles.noteText}>{item.text}</Text>
             </View>
-            <Text style={styles.noteText}>{item.text}</Text>
-          </View>
-        )}
-        ListEmptyComponent={
-          <View style={styles.empty}><Text style={styles.emptyEmoji}>📝</Text><Text style={styles.emptyText}>Henüz not eklenmedi</Text></View>
-        }
-      />
+          )}
+          ListEmptyComponent={
+            <View style={styles.empty}><Text style={styles.emptyEmoji}>📝</Text><Text style={styles.emptyText}>No notes added yet</Text></View>
+          }
+        />
+      )}
 
       {/* FAB */}
       <TouchableOpacity style={styles.fab} onPress={() => setModalVisible(true)}>
-        <Text style={styles.fabText}>+ Not Ekle</Text>
+        <Text style={styles.fabText}>+ Add Note</Text>
       </TouchableOpacity>
 
       {/* Add note modal */}
@@ -74,10 +91,10 @@ export default function NotesScreen({ route, navigation }: Props) {
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.modalOverlay}>
             <View style={styles.modalBox}>
-              <Text style={styles.modalTitle}>Not Ekle</Text>
+              <Text style={styles.modalTitle}>Add Note</Text>
               <TextInput
                 style={styles.modalInput}
-                placeholder="Ağaç hakkında bir not ekleyin…"
+                placeholder="Add a note about the tree…"
                 value={newNoteText}
                 onChangeText={setNewNoteText}
                 multiline
@@ -87,10 +104,18 @@ export default function NotesScreen({ route, navigation }: Props) {
               />
               <View style={styles.modalBtns}>
                 <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalVisible(false)}>
-                  <Text style={styles.cancelText}>İptal</Text>
+                  <Text style={styles.cancelText}>Cancel</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.saveBtn, !newNoteText.trim() && styles.saveBtnDisabled]} onPress={addNote} disabled={!newNoteText.trim()}>
-                  <Text style={styles.saveText}>Kaydet</Text>
+                <TouchableOpacity 
+                  style={[styles.saveBtn, (!newNoteText.trim() || addNoteMutation.isPending) && styles.saveBtnDisabled]} 
+                  onPress={addNote} 
+                  disabled={!newNoteText.trim() || addNoteMutation.isPending}
+                >
+                  {addNoteMutation.isPending ? (
+                    <ActivityIndicator color={Colors.white} />
+                  ) : (
+                    <Text style={styles.saveText}>Save</Text>
+                  )}
                 </TouchableOpacity>
               </View>
             </View>
@@ -103,6 +128,7 @@ export default function NotesScreen({ route, navigation }: Props) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.neutralBg },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: Spacing.md, backgroundColor: Colors.white },
   back: { color: Colors.greenPrimary, fontSize: 16, fontWeight: '500' },
   headerTitle: { fontSize: 15, fontWeight: '600', color: Colors.neutralDark },
@@ -123,7 +149,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20, paddingVertical: 14, borderRadius: Radius.full, ...Shadow.modal,
   },
   fabText: { color: Colors.white, fontWeight: '700', fontSize: 15 },
-  modalOverlay: { flex: 1, justifyContent: 'flex-end' },
+  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
   modalBox: { backgroundColor: Colors.white, borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl, padding: Spacing.xl },
   modalTitle: { fontSize: 20, fontWeight: '700', color: Colors.neutralDark, marginBottom: Spacing.md },
   modalInput: {

@@ -1,6 +1,8 @@
 // Axios instance with JWT interceptors
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Toast from 'react-native-toast-message';
+import { extractError } from '../utils/error';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/api';
 
@@ -24,6 +26,16 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       await AsyncStorage.removeItem('token');
     }
+    
+    // Automatically show toast for all errors except 401 if it's handled gracefully elsewhere, but let's show for all
+    const errorMessage = extractError(error);
+    Toast.show({
+      type: 'error',
+      text1: 'Error',
+      text2: errorMessage,
+      position: 'top',
+    });
+
     return Promise.reject(error);
   }
 );

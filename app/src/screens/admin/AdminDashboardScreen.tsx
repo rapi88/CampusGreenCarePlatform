@@ -1,86 +1,146 @@
 // Admin Dashboard
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import Toast from 'react-native-toast-message';
 import { Colors } from '../../theme/colors';
 import { Spacing, Radius, Shadow } from '../../theme/spacing';
 import { useAuthStore } from '../../store/auth.store';
-import { useAwardStore } from '../../store/award.store';
-
-const STATS = [
-  { label: 'Toplam Ağaç', value: '128', icon: '🌳' },
-  { label: 'Aktif Gönüllü', value: '47', icon: '👥' },
-  { label: 'Bugün Sulama', value: '23', icon: '💧' },
-  { label: 'Açık Sorun', value: '5', icon: '⚠️' },
-];
+import { adminApi } from '../../api/admin.api';
+import { awardApi } from '../../api/award.api';
 
 export default function AdminDashboardScreen() {
   const navigation = useNavigation<any>();
+  const queryClient = useQueryClient();
   const { clearAuth } = useAuthStore();
-  const { topWatererPhotoUrl, setTopWatererPhotoUrl, awardText, setAwardText } = useAwardStore();
-  const [awardUrl, setAwardUrl] = React.useState(topWatererPhotoUrl || '');
-  const [localAwardText, setLocalAwardText] = React.useState(awardText || '');
+  
+  const [awardUrl, setAwardUrl] = useState('');
+  const [localAwardText, setLocalAwardText] = useState('');
+
+  const { data: statsResponse, isLoading } = useQuery({
+    queryKey: ['admin', 'stats'],
+    queryFn: () => adminApi.getStats(),
+  });
+
+  const { data: awardResp } = useQuery({
+    queryKey: ['weeklyAward'],
+    queryFn: () => awardApi.getWeeklyAward(),
+  });
+
+  useEffect(() => {
+    if (awardResp?.data) {
+      setAwardUrl(awardResp.data.photoUrl || '');
+      setLocalAwardText(awardResp.data.text || '');
+    }
+  }, [awardResp]);
+
+  const updateAwardMutation = useMutation({
+    mutationFn: () => awardApi.updateWeeklyAward({
+      photoUrl: awardUrl,
+      text: localAwardText,
+      userId: null
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['weeklyAward'] });
+      Toast.show({ type: 'success', text1: 'Success', text2: 'Award updated!' });
+    },
+    onError: () => {
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to update award' });
+    }
+  });
+
+  const stats = statsResponse?.data || {
+    totalTrees: 0,
+    activeVolunteers: 0,
+    wateringsToday: 0,
+    openIssues: 0,
+  };
+
+  const handleLogout = async () => {
+    await AsyncStorage.removeItem('token');
+    clearAuth();
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>🌿 Admin Panel</Text>
-        <TouchableOpacity onPress={clearAuth}><Text style={styles.logout}>Çıkış</Text></TouchableOpacity>
+        <TouchableOpacity onPress={handleLogout}><Text style={styles.logout}>Logout</Text></TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
         {/* Stats grid */}
-        <View style={styles.statsGrid}>
-          {STATS.map((s) => (
-            <View key={s.label} style={styles.statCard}>
-              <Text style={styles.statIcon}>{s.icon}</Text>
-              <Text style={styles.statValue}>{s.value}</Text>
-              <Text style={styles.statLabel}>{s.label}</Text>
+        {isLoading ? (
+          <ActivityIndicator size="large" color={Colors.greenPrimary} style={{ marginVertical: Spacing.xl }} />
+        ) : (
+          <View style={styles.statsGrid}>
+            <View style={styles.statCard}>
+              <Text style={styles.statIcon}>🌳</Text>
+              <Text style={styles.statValue}>{stats.totalTrees || 0}</Text>
+              <Text style={styles.statLabel}>Total Trees</Text>
             </View>
-          ))}
-        </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statIcon}>👥</Text>
+              <Text style={styles.statValue}>{stats.activeVolunteers || 0}</Text>
+              <Text style={styles.statLabel}>Volunteers</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statIcon}>💧</Text>
+              <Text style={styles.statValue}>{stats.wateringsToday || 0}</Text>
+              <Text style={styles.statLabel}>Waterings Today</Text>
+            </View>
+            <View style={styles.statCard}>
+              <Text style={styles.statIcon}>⚠️</Text>
+              <Text style={styles.statValue}>{stats.openIssues || 0}</Text>
+              <Text style={styles.statLabel}>Open Issues</Text>
+            </View>
+          </View>
+        )}
 
-        <Text style={styles.sectionTitle}>Hızlı İşlemler</Text>
+        <Text style={styles.sectionTitle}>Quick Actions</Text>
 
         {/* Quick actions */}
         {[
-          { icon: '🌟 Ağaç Önerileri', screen: 'AdminTreeSuggestions', params: {} },
-          { icon: '+ Ağaç Ekle', screen: 'AdminAddEditTree', params: {} },
-          { icon: '🌳 Ağaç Listesi', screen: 'AdminTreeList', params: {} },
-          { icon: '📊 Sulama Raporları', screen: 'AdminReports', params: {} },
-          { icon: '👥 Kullanıcı Yönetimi', screen: 'AdminUserManagement', params: {} },
+          { icon: '🌟 Tree Suggestions', screen: 'AdminTreeSuggestions', params: {} },
+          { icon: '+ Add Tree', screen: 'AdminAddEditTree', params: {} },
+          { icon: '🌳 Tree List', screen: 'AdminTreeList', params: {} },
+          { icon: '📊 Watering Reports', screen: 'AdminReports', params: {} },
+          { icon: '👥 User Management', screen: 'AdminUserManagement', params: {} },
         ].map((a) => (
           <TouchableOpacity key={a.icon} style={styles.actionBtn} onPress={() => navigation.navigate(a.screen, a.params)}>
             <Text style={styles.actionBtnText}>{a.icon}</Text>
             <Text style={styles.actionArrow}>›</Text>
           </TouchableOpacity>
         ))}
-        <Text style={[styles.sectionTitle, { marginTop: Spacing.md }]}>Haftanın Ödülü</Text>
+        <Text style={[styles.sectionTitle, { marginTop: Spacing.md }]}>Award of the Week</Text>
         <View style={styles.awardBox}>
           <View style={styles.awardInputs}>
             <TextInput
               style={styles.awardInput}
-              placeholder="Fotoğraf URL'sini yapıştırın..."
+              placeholder="Paste photo URL..."
               value={awardUrl}
               onChangeText={setAwardUrl}
             />
             <TextInput
               style={styles.awardInput}
-              placeholder="Ödül üzerine yazılacak metin..."
+              placeholder="Text on the award..."
               value={localAwardText}
               onChangeText={setLocalAwardText}
             />
           </View>
           <TouchableOpacity
             style={styles.awardSaveBtn}
-            onPress={() => {
-              setTopWatererPhotoUrl(awardUrl);
-              setAwardText(localAwardText);
-              alert('Ödül güncellendi!');
-            }}
+            onPress={() => updateAwardMutation.mutate()}
+            disabled={updateAwardMutation.isPending}
           >
-            <Text style={styles.awardSaveText}>Kaydet</Text>
+            {updateAwardMutation.isPending ? (
+              <ActivityIndicator color={Colors.white} />
+            ) : (
+              <Text style={styles.awardSaveText}>Save</Text>
+            )}
           </TouchableOpacity>
         </View>
 

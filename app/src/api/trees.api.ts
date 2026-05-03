@@ -1,5 +1,6 @@
 import { api } from './axios';
-import { TreeStatus } from '../store/map.store';
+
+export type TreeStatus = 'ACTIVE' | 'PENDING' | 'DENIED' | 'REMOVED';
 
 export interface Tree {
   id: string;
@@ -8,6 +9,7 @@ export interface Tree {
   latitude: number;
   longitude: number;
   status: TreeStatus;
+  approvalStatus?: 'PENDING' | 'DENIED' | 'ACTIVE' | 'REMOVED';
   photoUrl?: string;
   estimatedAge: number;
   height: number;
@@ -16,14 +18,25 @@ export interface Tree {
   lastWateredAt?: string;
   location: string;
   isNaturalMonument?: boolean;
-  health: 'Sağlıklı' | 'Hasta' | 'Kritik';
+  health: 'Healthy' | 'Sick' | 'Critical';
   volunteerCount: number;
   maxVolunteers: number;
+  isAdopted?: boolean;
+  isSuggested?: boolean;
+  suggestionId?: string;
+}
+
+export interface MyTreesResponse {
+  adopted: Tree[];
+  suggested: Tree[];
 }
 
 export const treesApi = {
   getAll: (params?: { status?: TreeStatus }) => api.get<Tree[]>('/trees', { params }),
   getById: (id: string) => api.get<Tree>(`/trees/${id}`),
+  getMyTrees: () => api.get<MyTreesResponse>('/trees/mine'),
+  suggest: (data: Partial<Tree>) => api.post('/trees/suggest', data),
+  dismissSuggestion: (id: string) => api.put(`/trees/suggestions/${id}/dismiss`),
   adopt: (id: string) => api.post(`/trees/${id}/adopt`),
   leaveAdoption: (id: string) => api.delete(`/trees/${id}/adopt`),
   water: (id: string, coords: { lat: number; lng: number }) =>

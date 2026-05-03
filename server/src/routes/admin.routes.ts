@@ -10,18 +10,18 @@ const router = Router();
 // Apply auth + admin guard to all routes in this group
 router.use(auth, adminOnly);
 
-// Tree CRUD (supports optional photo upload)
-router.post('/trees', upload.single('photo'), adminController.createTree);
-router.put('/trees/:id', upload.single('photo'), adminController.updateTree);
+// Tree CRUD (photo upload handled separately)
+router.post('/trees', adminController.createTree);
+router.put('/trees/:id', adminController.updateTree);
 router.delete('/trees/:id', adminController.deleteTree);
+router.post('/trees/:id/photo', upload.single('photo'), adminController.uploadTreePhoto);
 
 // Tree Suggestions
 router.get('/trees/suggestions', adminController.getSuggestions);
 router.post('/trees/:id/approve', adminController.approveSuggestion);
 router.post('/trees/:id/reject', adminController.rejectSuggestion);
 
-// Award
-router.post('/award', adminController.setAwardUrl);
+
 
 // Reports
 router.get('/reports/watering', adminController.getWateringReport);
@@ -33,7 +33,6 @@ router.get('/users/:userId/score', adminController.getUserScore);
 // Dashboard stats
 router.get('/stats', adminController.getStats);
 
-// Leaderboard (also accessible by admin)
-router.get('/leaderboard', adminController.getLeaderboard);
+
 
 export default router;

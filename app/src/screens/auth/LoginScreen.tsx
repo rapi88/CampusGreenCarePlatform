@@ -24,7 +24,7 @@ export default function LoginScreen({ navigation }: Props) {
   const validate = () => {
     let valid = true;
     if (!isGTUEmail(email)) {
-      setEmailError('Lütfen geçerli bir GTU e-posta adresi girin (@gtu.edu.tr)');
+      setEmailError('Please enter a valid GTU email (@gtu.edu.tr)');
       valid = false;
     } else setEmailError('');
     return valid;
@@ -38,7 +38,7 @@ export default function LoginScreen({ navigation }: Props) {
       await AsyncStorage.setItem('token', res.data.token);
       setAuth(res.data.user, res.data.token);
     } catch (err: any) {
-      Alert.alert('Giriş Hatası', err.response?.data?.message ?? 'Bir hata oluştu.');
+      Alert.alert('Login Error', err.response?.data?.message ?? 'An error occurred.');
     } finally {
       setLoading(false);
     }
@@ -49,23 +49,23 @@ export default function LoginScreen({ navigation }: Props) {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.logoCircle}><Text style={styles.logoEmoji}>🌿</Text></View>
-        <Text style={styles.title}>Hoş Geldiniz</Text>
-        <Text style={styles.subtitle}>GTU kampüs ağaç bakım platformu</Text>
+        <Text style={styles.title}>Welcome</Text>
+        <Text style={styles.subtitle}>GTU Campus Green Care Platform</Text>
       </View>
 
       {/* Form */}
       <View style={styles.form}>
         <FormInput
-          label="GTU E-posta"
-          placeholder="ad.soyad@gtu.edu.tr"
+          label="GTU Email"
+          placeholder="name.surname@gtu.edu.tr"
           keyboardType="email-address"
           value={email}
           onChangeText={setEmail}
           error={emailError}
         />
         <FormInput
-          label="Şifre"
-          placeholder="Şifrenizi girin"
+          label="Password"
+          placeholder="Enter your password"
           isPassword
           value={password}
           onChangeText={setPassword}
@@ -75,7 +75,7 @@ export default function LoginScreen({ navigation }: Props) {
           onPress={() => navigation.navigate('ForgotPassword')}
           style={styles.forgotLink}
         >
-          <Text style={styles.link}>Şifremi unuttum</Text>
+          <Text style={styles.link}>Forgot password?</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -86,50 +86,14 @@ export default function LoginScreen({ navigation }: Props) {
           {loading ? (
             <ActivityIndicator color={Colors.white} />
           ) : (
-            <Text style={styles.btnText}>Giriş Yap</Text>
+            <Text style={styles.btnText}>Login</Text>
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.btn, { backgroundColor: Colors.neutralMid, marginTop: Spacing.sm }]}
-          onPress={async () => {
-            const tempUser = {
-              id: 'temp-123',
-              name: 'Test Kullanıcısı',
-              email: 'test@gtu.edu.tr',
-              role: 'USER' as const,
-              points: 120,
-              adoptedTreeIds: [],
-            };
-            await AsyncStorage.setItem('token', 'temp-token');
-            setAuth(tempUser, 'temp-token');
-          }}
-        >
-          <Text style={styles.btnText}>Test Girişi (Geçici)</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.btn, { backgroundColor: Colors.neutralDark, marginTop: Spacing.sm }]}
-          onPress={async () => {
-            const tempAdmin = {
-              id: 'admin-123',
-              name: 'Admin Kullanıcısı',
-              email: 'admin@gtu.edu.tr',
-              role: 'ADMIN' as const,
-              points: 0,
-              adoptedTreeIds: [],
-            };
-            await AsyncStorage.setItem('token', 'temp-admin-token');
-            setAuth(tempAdmin, 'temp-admin-token');
-          }}
-        >
-          <Text style={styles.btnText}>Admin Girişi (Geçici)</Text>
-        </TouchableOpacity>
-
         <View style={styles.registerRow}>
-          <Text style={styles.muted}>Hesabın yok mu? </Text>
+          <Text style={styles.muted}>Don't have an account? </Text>
           <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-            <Text style={styles.link}>Kayıt Ol</Text>
+            <Text style={styles.link}>Register</Text>
           </TouchableOpacity>
         </View>
       </View>

@@ -32,6 +32,20 @@ export const authController = {
     }
   },
 
+  async verifyEmail(req: Request, res: Response, next: NextFunction) {
+    try {
+      const token = req.query.token as string;
+      if (!token) {
+        res.status(400).json({ message: 'Token is required' });
+        return;
+      }
+      const result = await authService.verifyEmail(token);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+
   async forgotPassword(req: Request, res: Response, next: NextFunction) {
     try {
       const { email } = req.body;
@@ -47,6 +61,29 @@ export const authController = {
       const { expoPushToken } = req.body;
       const result = await authService.registerPushToken(req.user!.id, expoPushToken);
       res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async uploadAvatar(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!req.file) {
+        res.status(400).json({ message: 'No image provided' });
+        return;
+      }
+
+      const { StorageService } = require('../services/storage.service');
+      const filename = StorageService.generateFilename(req.file.originalname);
+      const publicUrl = await StorageService.uploadFile('avatars', `${req.user!.id}_${filename}`, req.file.buffer, req.file.mimetype);
+
+      const { prisma } = require('../config/database');
+      await prisma.user.update({
+        where: { id: req.user!.id },
+        data: { avatarUrl: publicUrl },
+      });
+
+      res.json({ message: 'Avatar updated successfully', avatarUrl: publicUrl });
     } catch (error) {
       next(error);
     }

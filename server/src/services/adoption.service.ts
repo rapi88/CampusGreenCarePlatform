@@ -11,17 +11,17 @@ export const adoptionService = {
       where: { id: treeId },
       include: { _count: { select: { adoptions: true } } },
     });
-    if (!tree) throw new NotFoundError('Ağaç bulunamadı');
+    if (!tree) throw new NotFoundError('Tree not found');
 
     // Check tree volunteer capacity
     if (tree._count.adoptions >= tree.maxVolunteers) {
-      throw new BadRequestError('Bu ağacın gönüllü kontenjanı dolu');
+      throw new BadRequestError('Maximum volunteer capacity reached for this tree');
     }
 
     // Check user adoption limit
     const userAdoptionCount = await prisma.adoption.count({ where: { userId } });
     if (userAdoptionCount >= MAX_TREES_PER_USER) {
-      throw new BadRequestError(`Bir kullanıcı en fazla ${MAX_TREES_PER_USER} ağaç sahiplenebilir`);
+      throw new BadRequestError(`A user can adopt a maximum of ${MAX_TREES_PER_USER} trees`);
     }
 
     // Check if already adopted
@@ -29,14 +29,14 @@ export const adoptionService = {
       where: { userId_treeId: { userId, treeId } },
     });
     if (existing) {
-      throw new ConflictError('Bu ağacı zaten sahiplendiniz');
+      throw new ConflictError('You have already adopted this tree');
     }
 
     await prisma.adoption.create({
       data: { userId, treeId },
     });
 
-    return { message: 'Ağaç başarıyla sahiplenildi' };
+    return { message: 'Tree successfully adopted' };
   },
 
   async leave(userId: string, treeId: string) {
@@ -45,13 +45,13 @@ export const adoptionService = {
     });
 
     if (!adoption) {
-      throw new NotFoundError('Bu ağacı sahiplenmemişsiniz');
+      throw new NotFoundError('You have not adopted this tree');
     }
 
     await prisma.adoption.delete({
       where: { userId_treeId: { userId, treeId } },
     });
 
-    return { message: 'Sahiplenme iptal edildi' };
+    return { message: 'Adoption cancelled' };
   },
 };

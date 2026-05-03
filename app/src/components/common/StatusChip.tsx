@@ -2,17 +2,21 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Colors } from '../../theme/colors';
-import { TreeStatus } from '../../store/map.store';
+import { TreeStatus } from '../../api/trees.api';
 
-type StatusType = TreeStatus | 'Sağlıklı' | 'Hasta' | 'Kritik';
+type StatusType = 'watered' | 'needs_water' | 'due_soon' | 'Healthy' | 'Sick' | 'Critical' | TreeStatus;
 
 const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string }> = {
-  watered: { label: 'Sulanmış', bg: Colors.greenLight, color: Colors.greenDark },
-  needs_water: { label: 'Sulanmalı', bg: '#FFEBEE', color: Colors.statusDue },
-  due_soon: { label: 'Yakında', bg: '#FFF3E0', color: Colors.statusSoon },
-  Sağlıklı: { label: 'Sağlıklı', bg: Colors.greenLight, color: Colors.greenDark },
-  Hasta: { label: 'Hasta', bg: '#FFF3E0', color: Colors.statusSoon },
-  Kritik: { label: 'Kritik', bg: '#FFEBEE', color: Colors.statusDue },
+  watered: { label: 'Watered', bg: Colors.greenLight, color: Colors.greenDark },
+  needs_water: { label: 'Needs Water', bg: '#FFEBEE', color: Colors.statusDue },
+  due_soon: { label: 'Due Soon', bg: '#FFF3E0', color: Colors.statusSoon },
+  Healthy: { label: 'Healthy', bg: Colors.greenLight, color: Colors.greenDark },
+  Sick: { label: 'Sick', bg: '#FFF3E0', color: Colors.statusSoon },
+  Critical: { label: 'Critical', bg: '#FFEBEE', color: Colors.statusDue },
+  ACTIVE: { label: 'Active', bg: Colors.greenLight, color: Colors.greenDark },
+  PENDING: { label: 'Pending', bg: '#FFF3E0', color: Colors.statusSoon },
+  DENIED: { label: 'Denied', bg: '#FFEBEE', color: Colors.statusDue },
+  REMOVED: { label: 'Removed', bg: '#E0E0E0', color: Colors.neutralDark },
 };
 
 interface StatusChipProps {
