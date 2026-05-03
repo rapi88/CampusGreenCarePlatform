@@ -13,6 +13,8 @@ import chatRoutes from './routes/chat.routes';
 import notesRoutes from './routes/notes.routes';
 import adminRoutes from './routes/admin.routes';
 import debugRoutes from './routes/debug.routes';
+import awardRoutes from './routes/award.routes';
+import leaderboardRoutes from './routes/leaderboard.routes';
 
 const app = express();
 
@@ -49,13 +51,15 @@ app.use('/api/auth', authRoutes);
 app.use('/api/trees', treeRoutes);
 app.use('/api/trees', chatRoutes);   // /api/trees/:treeId/chat
 app.use('/api/trees', notesRoutes);  // /api/trees/:treeId/notes
+app.use('/api/users/leaderboard', leaderboardRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/award', awardRoutes);
 app.use('/api/debug', debugRoutes);
 
 // ── 404 Handler ──────────────────────────────────────────
 
 app.use((_req, res) => {
-  res.status(404).json({ success: false, message: 'Endpoint bulunamadı' });
+  res.status(404).json({ success: false, message: 'Endpoint not found' });
 });
 
 // ── Global Error Handler ─────────────────────────────────

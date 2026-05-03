@@ -18,9 +18,9 @@ export const debugController = {
         select: { expoPushToken: true, name: true },
       });
 
-      if (!user) throw new NotFoundError('Kullanıcı bulunamadı');
-      if (!user.expoPushToken) {
-        res.status(400).json({ message: 'Kullanıcının push token\'ı kayıtlı değil' });
+      if (!user) throw new NotFoundError('User not found');
+      if (!user?.expoPushToken) {
+        res.status(400).json({ message: 'User does not have a registered push token' });
         return;
       }
 
@@ -30,7 +30,7 @@ export const debugController = {
         message || `Bu bir test bildirimidir — ${user.name}`
       );
 
-      res.json({ message: 'Bildirim gönderildi', ticket });
+      res.json({ message: 'Notification sent', ticket });
     } catch (error) {
       next(error);
     }

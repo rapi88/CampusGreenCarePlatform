@@ -6,8 +6,10 @@ export interface User {
   name: string;
   email: string;
   role: 'USER' | 'ADMIN';
-  avatarUrl?: string;
+  avatarUrl: string | null;
   points: number;
+  adoptedTreeCount?: number;
+  totalWaterings?: number;
   adoptedTreeIds: string[];
 }
 

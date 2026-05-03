@@ -1,90 +1,114 @@
 // Chat screen — volunteer group chat for a tree
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform,
+  View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import Toast from 'react-native-toast-message';
 import { Colors } from '../../theme/colors';
 import { Spacing, Radius, Shadow } from '../../theme/spacing';
 import { TreeStackParamList } from '../../navigation/MainTabs';
+import { chatApi } from '../../api/chat.api';
+import { useAuthStore } from '../../store/auth.store';
 
 type Props = NativeStackScreenProps<TreeStackParamList, 'Chat'>;
 
-interface Message { id: string; userId: string; userName: string; initial: string; text: string; time: string; }
-
-const MY_USER_ID = 'me';
-
-const MOCK_MSGS: Message[] = [
-  { id: '1', userId: 'u1', userName: 'Mehmet Y.', initial: 'MY', text: 'Merhaba! Bugün ağacı suladım 💧', time: '10:32' },
-  { id: '2', userId: 'u2', userName: 'Zeynep K.', initial: 'ZK', text: 'Harika! Ben yarın sabah sulayacağım.', time: '10:45' },
-];
-
 export default function ChatScreen({ route, navigation }: Props) {
   const { treeId, treeName } = route.params;
-  const [messages, setMessages] = useState<Message[]>(MOCK_MSGS);
+  const queryClient = useQueryClient();
+  const { user } = useAuthStore();
   const [text, setText] = useState('');
   const listRef = useRef<FlatList>(null);
 
+  const { data: messagesResponse, isLoading } = useQuery({
+    queryKey: ['tree', treeId, 'chat'],
+    queryFn: () => chatApi.getMessages(treeId),
+    refetchInterval: 5000, // simple polling
+  });
+
+  const sendMessageMutation = useMutation({
+    mutationFn: (msg: string) => chatApi.sendMessage(treeId, msg),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tree', treeId, 'chat'] });
+      setText('');
+      setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
+    },
+    onError: () => {
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to send message.' });
+    }
+  });
+
+  const messages = messagesResponse?.data || [];
+
   const sendMessage = () => {
     if (!text.trim()) return;
-    const msg: Message = {
-      id: Date.now().toString(), userId: MY_USER_ID, userName: 'Sen', initial: 'BN',
-      text: text.trim(), time: new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }),
-    };
-    setMessages((m) => [...m, msg]);
-    setText('');
-    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
+    sendMessageMutation.mutate(text.trim());
   };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.back}>‹ Geri</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.back}>‹ Back</Text></TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>{treeName}</Text>
-          <Text style={styles.headerSub}>Gönüllü Sohbeti</Text>
+          <Text style={styles.headerSub}>Volunteer Chat</Text>
         </View>
         <View style={{ width: 60 }} />
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={0}>
-        <FlatList
-          ref={listRef}
-          data={messages}
-          keyExtractor={(m) => m.id}
-          contentContainerStyle={styles.list}
-          renderItem={({ item, index }) => {
-            const isMe = item.userId === MY_USER_ID;
-            const showAvatar = !isMe && (index === 0 || messages[index - 1].userId !== item.userId);
-            return (
-              <View style={[styles.msgRow, isMe && styles.msgRowMe]}>
-                {!isMe && (
-                  <View style={[styles.avatar, !showAvatar && styles.avatarInvisible]}>
-                    <Text style={styles.avatarInitial}>{item.initial}</Text>
+        {isLoading ? (
+          <View style={styles.center}>
+            <ActivityIndicator size="large" color={Colors.greenPrimary} />
+          </View>
+        ) : (
+          <FlatList
+            ref={listRef}
+            data={messages}
+            keyExtractor={(m) => m.id}
+            contentContainerStyle={styles.list}
+            renderItem={({ item, index }) => {
+              const isMe = item.userId === user?.id;
+              const showAvatar = !isMe && (index === 0 || messages[index - 1].userId !== item.userId);
+              return (
+                <View style={[styles.msgRow, isMe && styles.msgRowMe]}>
+                  {!isMe && (
+                    <View style={[styles.avatar, !showAvatar && styles.avatarInvisible]}>
+                      <Text style={styles.avatarInitial}>{item.userName?.charAt(0) || 'U'}</Text>
+                    </View>
+                  )}
+                  <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleOther]}>
+                    {showAvatar && !isMe && <Text style={styles.senderName}>{item.userName}</Text>}
+                    <Text style={[styles.msgText, isMe && styles.msgTextMe]}>{item.text}</Text>
+                    <Text style={[styles.msgTime, isMe && styles.msgTimeMe]}>{new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
                   </View>
-                )}
-                <View style={[styles.bubble, isMe ? styles.bubbleMe : styles.bubbleOther]}>
-                  {showAvatar && !isMe && <Text style={styles.senderName}>{item.userName}</Text>}
-                  <Text style={[styles.msgText, isMe && styles.msgTextMe]}>{item.text}</Text>
-                  <Text style={[styles.msgTime, isMe && styles.msgTimeMe]}>{item.time}</Text>
                 </View>
-              </View>
-            );
-          }}
-        />
+              );
+            }}
+          />
+        )}
 
         <View style={styles.inputRow}>
           <TextInput
             style={styles.input}
-            placeholder="Mesaj yaz…"
+            placeholder="Write a message…"
             value={text}
             onChangeText={setText}
             multiline
             placeholderTextColor={Colors.neutralMid}
           />
-          <TouchableOpacity style={[styles.sendBtn, !text.trim() && styles.sendBtnDisabled]} onPress={sendMessage} disabled={!text.trim()}>
-            <Text style={styles.sendIcon}>➤</Text>
+          <TouchableOpacity 
+            style={[styles.sendBtn, (!text.trim() || sendMessageMutation.isPending) && styles.sendBtnDisabled]} 
+            onPress={sendMessage} 
+            disabled={!text.trim() || sendMessageMutation.isPending}
+          >
+            {sendMessageMutation.isPending ? (
+              <ActivityIndicator color={Colors.white} size="small" />
+            ) : (
+              <Text style={styles.sendIcon}>➤</Text>
+            )}
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -94,6 +118,7 @@ export default function ChatScreen({ route, navigation }: Props) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.neutralBg },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     padding: Spacing.md, backgroundColor: Colors.white, borderBottomWidth: 1, borderBottomColor: Colors.neutralLight,

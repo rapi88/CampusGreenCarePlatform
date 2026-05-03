@@ -1,67 +1,87 @@
-// Adoption screen — volunteer slots, adopt action
+// Adoption screen
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import Toast from 'react-native-toast-message';
 import { Colors } from '../../theme/colors';
 import { Spacing, Radius, Shadow } from '../../theme/spacing';
 import { TreeStackParamList } from '../../navigation/MainTabs';
+import { treesApi } from '../../api/trees.api';
 
 type Props = NativeStackScreenProps<TreeStackParamList, 'Adoption'>;
 
-const MOCK_VOLUNTEERS = [
-  { id: 'u1', name: 'Mehmet Y.', initial: 'MY' },
-  { id: 'u2', name: 'Zeynep K.', initial: 'ZK' },
-];
-const MAX = 4;
-
 export default function AdoptionScreen({ route, navigation }: Props) {
   const { treeId } = route.params;
-  const [volunteers, setVolunteers] = useState(MOCK_VOLUNTEERS);
-  const [adopted, setAdopted] = useState(false);
-  const [nameModal, setNameModal] = useState(false);
-  const [treeName, setTreeName] = useState('');
+  const queryClient = useQueryClient();
 
-  const isFirst = volunteers.length === 0;
-  const isFull = volunteers.length >= MAX;
+  const { data: treeResponse, isLoading } = useQuery({
+    queryKey: ['tree', treeId],
+    queryFn: () => treesApi.getById(treeId),
+  });
+
+  const adoptMutation = useMutation({
+    mutationFn: () => treesApi.adopt(treeId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tree', treeId] });
+      queryClient.invalidateQueries({ queryKey: ['trees'] });
+      Toast.show({ type: 'success', text1: 'Success', text2: 'You have adopted this tree!' });
+      navigation.goBack();
+    },
+    onError: () => {
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to adopt the tree.' });
+    }
+  });
+
+  const tree = treeResponse?.data;
+  
+  if (isLoading) {
+    return (
+      <SafeAreaView style={[styles.safe, styles.center]}>
+        <ActivityIndicator size="large" color={Colors.greenPrimary} />
+      </SafeAreaView>
+    );
+  }
+
+  if (!tree) {
+    return (
+      <SafeAreaView style={[styles.safe, styles.center]}>
+        <Text style={{ color: Colors.neutralMid }}>Tree not found.</Text>
+      </SafeAreaView>
+    );
+  }
+
+  const isFull = tree.volunteerCount >= tree.maxVolunteers;
+  const isAdopted = tree.isAdopted;
 
   const handleAdopt = () => {
-    if (isFirst) { setNameModal(true); return; }
-    doAdopt();
-  };
-
-  const doAdopt = (customName?: string) => {
-    setAdopted(true);
-    setVolunteers((v) => [...v, { id: 'me', name: 'Sen', initial: 'BN' }]);
-    if (customName) Alert.alert('Harika!', `Ağaca "${customName}" adını verdiniz 🌿`);
+    adoptMutation.mutate();
   };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.back}>‹ Geri</Text></TouchableOpacity>
-        <Text style={styles.headerTitle}>Ağacı Sahiplen</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.back}>‹ Back</Text></TouchableOpacity>
+        <Text style={styles.headerTitle}>Adopt Tree</Text>
         <View style={{ width: 60 }} />
       </View>
 
       <View style={styles.body}>
         <Text style={styles.treeIcon}>🌳</Text>
-        <Text style={styles.title}>Ak Meşe #{treeId}</Text>
-        <Text style={styles.subtitle}>Bu ağacı sahiplenerek sulama hatırlatmaları alacaksınız.</Text>
+        <Text style={styles.title}>{tree.name} #{tree.id.slice(-4)}</Text>
+        <Text style={styles.subtitle}>Adopt this tree to receive watering reminders.</Text>
 
-        {/* Volunteer slots */}
+        {/* Volunteer slots summary */}
         <View style={styles.slotsSection}>
-          <Text style={styles.slotsTitle}>Gönüllüler ({volunteers.length}/{MAX})</Text>
+          <Text style={styles.slotsTitle}>Volunteers ({tree.volunteerCount}/{tree.maxVolunteers})</Text>
           <View style={styles.slots}>
-            {Array.from({ length: MAX }).map((_, i) => {
-              const vol = volunteers[i];
+            {Array.from({ length: tree.maxVolunteers }).map((_, i) => {
+              const isFilled = i < tree.volunteerCount;
               return (
-                <View key={i} style={[styles.slot, vol ? styles.slotFilled : styles.slotEmpty]}>
-                  {vol ? (
-                    <>
-                      <Text style={styles.slotInitial}>{vol.initial}</Text>
-                      <Text style={styles.slotName}>{vol.name}</Text>
-                    </>
+                <View key={i} style={[styles.slot, isFilled ? styles.slotFilled : styles.slotEmpty]}>
+                  {isFilled ? (
+                    <Text style={styles.slotInitial}>👤</Text>
                   ) : (
                     <Text style={styles.slotPlus}>+</Text>
                   )}
@@ -73,52 +93,31 @@ export default function AdoptionScreen({ route, navigation }: Props) {
 
         {/* Info box */}
         <View style={styles.infoBox}>
-          <Text style={styles.infoText}>💧 Sahiplendiğinizde sulama zamanı geldiğinde bildirim alırsınız.</Text>
-          <Text style={styles.infoText}>🌿 Bir kullanıcı en fazla 10 ağaç sahiplenebilir.</Text>
-          {isFirst && <Text style={styles.infoText}>✨ İlk sahiplenen ağaca özel bir isim verebilir!</Text>}
+          <Text style={styles.infoText}>💧 Once adopted, you will get notifications when it is time to water.</Text>
+          <Text style={styles.infoText}>🌿 A user can adopt multiple trees, but please commit to their care.</Text>
         </View>
 
         <TouchableOpacity
-          style={[styles.adoptBtn, (isFull || adopted) && styles.adoptBtnDisabled]}
-          disabled={isFull || adopted}
+          style={[styles.adoptBtn, (isFull || isAdopted || adoptMutation.isPending) && styles.adoptBtnDisabled]}
+          disabled={isFull || isAdopted || adoptMutation.isPending}
           onPress={handleAdopt}
         >
-          <Text style={styles.adoptBtnText}>
-            {adopted ? '✅ Sahiplendiniz' : isFull ? 'Kontenjan Dolu' : '🤝 Bu Ağacı Sahiplen'}
-          </Text>
+          {adoptMutation.isPending ? (
+             <ActivityIndicator color={Colors.white} />
+          ) : (
+            <Text style={styles.adoptBtnText}>
+              {isAdopted ? '✅ Adopted by You' : isFull ? 'No Slots Available' : '🤝 Adopt This Tree'}
+            </Text>
+          )}
         </TouchableOpacity>
       </View>
-
-      {/* First-adopter name modal */}
-      <Modal visible={nameModal} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>Ağaca İsim Ver 🌟</Text>
-            <Text style={styles.modalSub}>İlk sahiplenen olarak bu ağaca özel bir isim verebilirsiniz (opsiyonel).</Text>
-            <TextInput
-              style={styles.nameInput}
-              placeholder="Ağacın ismi…"
-              value={treeName}
-              onChangeText={setTreeName}
-              maxLength={30}
-            />
-            <View style={styles.modalBtns}>
-              <TouchableOpacity style={styles.modalSkip} onPress={() => { setNameModal(false); doAdopt(); }}>
-                <Text style={styles.modalSkipText}>Atla</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.modalSave} onPress={() => { setNameModal(false); doAdopt(treeName || undefined); }}>
-                <Text style={styles.modalSaveText}>Kaydet</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.neutralBg },
+  center: { alignItems: 'center', justifyContent: 'center' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: Spacing.md, backgroundColor: Colors.white },
   back: { color: Colors.greenPrimary, fontSize: 16, fontWeight: '500' },
   headerTitle: { fontSize: 16, fontWeight: '600', color: Colors.neutralDark },
@@ -132,8 +131,7 @@ const styles = StyleSheet.create({
   slot: { flex: 1, aspectRatio: 1, borderRadius: Radius.lg, alignItems: 'center', justifyContent: 'center' },
   slotFilled: { backgroundColor: Colors.greenLight },
   slotEmpty: { backgroundColor: Colors.white, borderWidth: 2, borderColor: Colors.neutralLight, borderStyle: 'dashed' },
-  slotInitial: { fontSize: 18, fontWeight: '700', color: Colors.greenDark },
-  slotName: { fontSize: 10, color: Colors.neutralMid, marginTop: 2, textAlign: 'center' },
+  slotInitial: { fontSize: 18, color: Colors.greenDark },
   slotPlus: { fontSize: 24, color: Colors.neutralLight },
   infoBox: { width: '100%', backgroundColor: Colors.greenLight, borderRadius: Radius.lg, padding: Spacing.md, marginBottom: Spacing.xl, gap: 6 },
   infoText: { fontSize: 13, color: Colors.neutralDark, lineHeight: 20 },
@@ -143,17 +141,4 @@ const styles = StyleSheet.create({
   },
   adoptBtnDisabled: { backgroundColor: Colors.neutralLight },
   adoptBtnText: { color: Colors.white, fontSize: 17, fontWeight: '700' },
-  modalOverlay: { flex: 1, backgroundColor: Colors.overlay, justifyContent: 'flex-end' },
-  modalBox: { backgroundColor: Colors.white, borderTopLeftRadius: Radius.xl, borderTopRightRadius: Radius.xl, padding: Spacing.xl },
-  modalTitle: { fontSize: 22, fontWeight: '700', color: Colors.neutralDark, marginBottom: 8 },
-  modalSub: { fontSize: 14, color: Colors.neutralMid, marginBottom: Spacing.lg, lineHeight: 20 },
-  nameInput: {
-    borderWidth: 1.5, borderColor: Colors.neutralLight, borderRadius: Radius.md,
-    height: 52, paddingHorizontal: Spacing.md, fontSize: 15, marginBottom: Spacing.lg,
-  },
-  modalBtns: { flexDirection: 'row', gap: Spacing.sm },
-  modalSkip: { flex: 1, height: 52, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.neutralBg, borderRadius: Radius.md },
-  modalSkipText: { fontSize: 15, color: Colors.neutralMid, fontWeight: '600' },
-  modalSave: { flex: 1, height: 52, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.greenPrimary, borderRadius: Radius.md },
-  modalSaveText: { fontSize: 15, color: Colors.white, fontWeight: '700' },
 });

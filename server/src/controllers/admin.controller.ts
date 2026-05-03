@@ -9,12 +9,6 @@ export const adminController = {
   async createTree(req: Request, res: Response, next: NextFunction) {
     try {
       const data = { ...req.body };
-
-      // If a photo was uploaded via multer, add the path
-      if (req.file) {
-        data.photoPath = `/uploads/trees/${req.file.filename}`;
-      }
-
       const tree = await treeService.create(data);
       res.status(201).json(tree);
     } catch (error) {
@@ -26,10 +20,6 @@ export const adminController = {
     try {
       const id = req.params.id as string;
       const data = { ...req.body };
-
-      if (req.file) {
-        data.photoPath = `/uploads/trees/${req.file.filename}`;
-      }
 
       const tree = await treeService.update(id, data);
       res.json(tree);
@@ -52,7 +42,7 @@ export const adminController = {
 
   async getSuggestions(req: Request, res: Response, next: NextFunction) {
     try {
-      const trees = await treeService.getAll(undefined, false); // Get unapproved
+      const trees = await treeService.getAll('PENDING');
       res.json(trees);
     } catch (error) {
       next(error);
@@ -72,28 +62,33 @@ export const adminController = {
   async rejectSuggestion(req: Request, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;
-      const result = await treeService.delete(id);
+      const result = await treeService.deny(id);
       res.json(result);
     } catch (error) {
       next(error);
     }
   },
 
-  // ── Award Settings ───────────────────────────────────────
-
-  async setAwardUrl(req: Request, res: Response, next: NextFunction) {
+  async uploadTreePhoto(req: Request, res: Response, next: NextFunction) {
     try {
-      const { url } = req.body;
-      const setting = await prisma.setting.upsert({
-        where: { key: 'AWARD_URL' },
-        update: { value: url },
-        create: { key: 'AWARD_URL', value: url },
-      });
-      res.json(setting);
+      const id = req.params.id as string;
+      if (!req.file) {
+        res.status(400).json({ message: 'No photo provided' });
+        return;
+      }
+      
+      const { StorageService } = require('../services/storage.service');
+      const filename = StorageService.generateFilename(req.file.originalname);
+      const publicUrl = await StorageService.uploadFile('trees', `${id}_${filename}`, req.file.buffer, req.file.mimetype);
+      
+      const tree = await treeService.update(id, { photoPath: publicUrl });
+      res.json(tree);
     } catch (error) {
       next(error);
     }
   },
+
+
 
   // ── Reports ────────────────────────────────────────────
 
@@ -139,15 +134,5 @@ export const adminController = {
     }
   },
 
-  // ── Leaderboard ────────────────────────────────────────
 
-  async getLeaderboard(req: Request, res: Response, next: NextFunction) {
-    try {
-      const type = (req.query.type as string) || 'most_watering';
-      const leaderboard = await reportService.getLeaderboard(type as any);
-      res.json(leaderboard);
-    } catch (error) {
-      next(error);
-    }
-  },
 };

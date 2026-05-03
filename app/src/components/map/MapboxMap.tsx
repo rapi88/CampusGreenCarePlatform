@@ -11,9 +11,9 @@ Mapbox.setAccessToken(MAPBOX_ACCESS_TOKEN);
 interface TreeMarker {
   id: string;
   name: string;
-  lat: number;
-  lng: number;
-  status: string;
+  latitude: number;
+  longitude: number;
+  hydrationStatus: string;
 }
 
 interface MapboxMapProps {
@@ -49,7 +49,7 @@ export default function MapboxMap({
   const handleMarkerPress = (tree: TreeMarker) => {
     onMarkerPress(tree);
     cameraRef.current?.setCamera({
-      centerCoordinate: [tree.lng, tree.lat],
+      centerCoordinate: [tree.longitude, tree.latitude],
       zoomLevel: 17,
       animationDuration: 600,
     });
@@ -89,7 +89,7 @@ export default function MapboxMap({
       {trees.map((tree) => (
         <MarkerView
           key={tree.id}
-          coordinate={[tree.lng, tree.lat]}
+          coordinate={[tree.longitude, tree.latitude]}
         >
           <TouchableOpacity
             style={[
@@ -98,7 +98,7 @@ export default function MapboxMap({
             ]}
             onPress={() => handleMarkerPress(tree)}
           >
-            <View style={[styles.markerDot, { backgroundColor: statusColors[tree.status] }]}>
+            <View style={[styles.markerDot, { backgroundColor: statusColors[tree.hydrationStatus] || '#999' }]}>
               <Text style={styles.markerEmoji}>🌳</Text>
             </View>
             <Text style={styles.markerLabel}>{tree.name}</Text>
@@ -114,7 +114,7 @@ export default function MapboxMap({
             <View style={styles.pendingDot}>
               <Text style={styles.pendingEmoji}>📍</Text>
             </View>
-            <Text style={styles.pendingLabel}>Yeni Ağaç</Text>
+            <Text style={styles.pendingLabel}>New Tree</Text>
             <View style={styles.pendingArrow} />
           </View>
         </MarkerView>

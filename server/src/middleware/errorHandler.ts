@@ -26,7 +26,7 @@ export function errorHandler(
   }
 
   // Multer errors
-  if (err.message?.includes('yüklenebilir') || err.message?.includes('File too large')) {
+  if (err.message?.includes('allowed') || err.message?.includes('File too large')) {
     res.status(400).json({
       success: false,
       message: err.message,
@@ -37,6 +37,6 @@ export function errorHandler(
   // Unknown errors
   res.status(500).json({
     success: false,
-    message: config.isDev ? err.message : 'Sunucu hatası oluştu',
+    message: config.isDev ? err.message : 'An internal server error occurred',
   });
 }

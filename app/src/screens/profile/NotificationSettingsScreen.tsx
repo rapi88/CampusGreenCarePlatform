@@ -7,9 +7,9 @@ import { Colors } from '../../theme/colors';
 import { Spacing, Radius, Shadow } from '../../theme/spacing';
 
 const SETTINGS = [
-  { id: 'watering', label: 'Sulama Hatırlatmaları', desc: 'Sulama zamanı geldiğinde bildirim al' },
-  { id: 'chat', label: 'Sohbet Mesajları', desc: 'Yeni sohbet mesajı bildirimlerini al' },
-  { id: 'issues', label: 'Sorun Bildirimleri', desc: 'Ağaçta sorun bildirilince bildirim al' },
+  { id: 'watering', label: 'Watering Reminders', desc: 'Get notified when it is time to water' },
+  { id: 'chat', label: 'Chat Messages', desc: 'Receive new chat message notifications' },
+  { id: 'issues', label: 'Issue Reports', desc: 'Get notified when a tree issue is reported' },
 ];
 
 export default function NotificationSettingsScreen() {
@@ -19,8 +19,8 @@ export default function NotificationSettingsScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.back}>‹ Geri</Text></TouchableOpacity>
-        <Text style={styles.headerTitle}>🔔 Bildirim Ayarları</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.back}>‹ Back</Text></TouchableOpacity>
+        <Text style={styles.headerTitle}>🔔 Notification Settings</Text>
         <View style={{ width: 60 }} />
       </View>
       <View style={styles.section}>

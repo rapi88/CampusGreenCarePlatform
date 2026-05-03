@@ -8,8 +8,17 @@ import { prisma } from '../config/database';
 export const treeController = {
   async getAll(req: Request, res: Response, next: NextFunction) {
     try {
-      const status = req.query.status as string | undefined;
-      const trees = await treeService.getAll(status as any, true);
+      const statusFilter = req.query.status as any || 'ACTIVE';
+      const trees = await treeService.getAll(statusFilter);
+      res.json(trees);
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  async getMyTrees(req: Request, res: Response, next: NextFunction) {
+    try {
+      const trees = await treeService.getMyTrees(req.user!.id);
       res.json(trees);
     } catch (error) {
       next(error);
@@ -19,19 +28,18 @@ export const treeController = {
   async suggest(req: Request, res: Response, next: NextFunction) {
     try {
       const data = req.body;
-      const tree = await treeService.suggest(data);
+      const tree = await treeService.suggest(data, req.user!.id);
       res.status(201).json(tree);
     } catch (error) {
       next(error);
     }
   },
 
-  async getAwardUrl(req: Request, res: Response, next: NextFunction) {
+  async dismissSuggestion(req: Request, res: Response, next: NextFunction) {
     try {
-      const setting = await prisma.setting.findUnique({
-        where: { key: 'AWARD_URL' },
-      });
-      res.json({ url: setting?.value || null });
+      const id = req.params.id as string;
+      const result = await treeService.dismissSuggestion(id, req.user!.id);
+      res.json(result);
     } catch (error) {
       next(error);
     }
