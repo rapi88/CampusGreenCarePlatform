@@ -1,5 +1,5 @@
 // Notification service — Expo Push Notification sender
-import { Expo, ExpoPushMessage, ExpoPushTicket } from 'expo-server-sdk';
+import { Expo, ExpoPushMessage, ExpoPushTicket, ExpoPushReceiptId } from 'expo-server-sdk';
 import { config } from '../config/env';
 
 const expo = new Expo({
@@ -70,6 +70,25 @@ export const notificationService = {
 
     console.log(`[Notification] Batch sent: ${tickets.length}/${messages.length} delivered`);
     return tickets;
+  },
+
+  /**
+   * Check push receipts for a list of ticket IDs (call ~30s after sending).
+   * Returns the full receipt map so the caller can surface errors to the client.
+   */
+  async checkReceipts(ticketIds: ExpoPushReceiptId[]) {
+    const receiptIdChunks = expo.chunkPushNotificationReceiptIds(ticketIds);
+    const receipts: Record<string, any> = {};
+
+    for (const chunk of receiptIdChunks) {
+      try {
+        const chunkReceipts = await expo.getPushNotificationReceiptsAsync(chunk);
+        Object.assign(receipts, chunkReceipts);
+      } catch (error) {
+        console.error('[Notification] Receipt check failed:', error);
+      }
+    }
+    return receipts;
   },
 
   /**

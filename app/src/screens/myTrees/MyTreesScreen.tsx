@@ -185,7 +185,7 @@ const styles = StyleSheet.create({
   cardWatered: { fontSize: 12, color: Colors.neutralMid },
   cardActions: { alignItems: 'flex-end', justifyContent: 'center', paddingLeft: 8 },
   leaveBtn: { backgroundColor: Colors.error, paddingHorizontal: 12, paddingVertical: 6, borderRadius: Radius.sm },
-  leaveText: { color: Colors.error, fontWeight: '700', fontSize: 12 },
+  leaveText: { color: Colors.white, fontWeight: '700', fontSize: 12 },
   empty: { alignItems: 'center', paddingTop: 80, paddingHorizontal: Spacing.xl },
   emptyEmoji: { fontSize: 60, marginBottom: Spacing.md },
   emptyTitle: { fontSize: 18, fontWeight: '700', color: Colors.neutralDark, marginBottom: 8, textAlign: 'center' },

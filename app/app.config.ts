@@ -29,11 +29,31 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   web: {
     favicon: './assets/favicon.png',
   },
+  extra: {
+    eas: {
+      projectId: process.env.EXPO_PROJECT_ID ?? '909462bd-54df-4213-bd5e-d0431196e913',
+    },
+  },
   plugins: [
     [
       '@rnmapbox/maps',
       {
         RNMapboxMapsImpl: 'mapbox',
+        RNMapboxMapsDownloadToken: process.env.RNMAPBOX_MAPS_DOWNLOAD_TOKEN,
+      },
+    ],
+    [
+      'expo-notifications',
+      {
+        icon: './assets/icon.png',
+        color: '#2E7D32',
+      },
+    ],
+    [
+      'expo-image-picker',
+      {
+        photosPermission: 'Allow Campus Green Care to access your photos to set a profile picture.',
+        cameraPermission: 'Allow Campus Green Care to use the camera to take a profile photo.',
       },
     ],
   ],

@@ -86,14 +86,4 @@ export const treeController = {
     }
   },
 
-  async reportIssue(req: Request, res: Response, next: NextFunction) {
-    try {
-      const id = req.params.id as string;
-      const { description } = req.body;
-      const result = await wateringService.reportIssue(req.user!.id, id, description);
-      res.status(201).json(result);
-    } catch (error) {
-      next(error);
-    }
-  },
 };

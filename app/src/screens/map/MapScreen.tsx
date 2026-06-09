@@ -21,6 +21,12 @@ import { adminApi } from '../../api/admin.api';
 const INITIAL_CENTER: [number, number] = [29.361, 40.804]; // [lng, lat]
 const INITIAL_ZOOM = 15;
 
+const USE_NEW_MAP_LIMITS = false; // Flag to toggle zoom limits and bounding box
+const CAMPUS_BOUNDS = {
+  ne: [29.380, 40.820] as [number, number],
+  sw: [29.340, 40.790] as [number, number],
+};
+
 const { width } = Dimensions.get('window');
 
 export default function MapScreen() {
@@ -217,10 +223,12 @@ export default function MapScreen() {
             selectedTreeId={selectedTreeId}
             onMarkerPress={handleMarkerPress}
             initialCenter={INITIAL_CENTER}
-            initialZoom={INITIAL_ZOOM}
+            initialZoom={USE_NEW_MAP_LIMITS ? 16 : INITIAL_ZOOM}
             isAddingTree={isAddingTree || isSuggestingTree}
             pendingPin={pendingPin}
             onMapClick={handleMapClick}
+            maxBounds={USE_NEW_MAP_LIMITS ? CAMPUS_BOUNDS : undefined}
+            followUserLocation={USE_NEW_MAP_LIMITS}
           />
 
           {/* Bottom preview card */}

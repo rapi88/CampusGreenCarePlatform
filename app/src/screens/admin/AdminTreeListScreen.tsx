@@ -69,7 +69,7 @@ export default function AdminTreeListScreen() {
           renderItem={({ item }) => {
             const hydration = computeHydrationStatus(item.lastWateredAt, item.wateringPeriodDays);
             return (
-              <View style={styles.row}>
+              <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('TreeDetail', { treeId: item.id })}>
                 <View style={styles.rowInfo}>
                   <Text style={styles.rowName}>{item.name}</Text>
                   <Text style={styles.rowSpecies}>{item.species}</Text>
@@ -86,7 +86,7 @@ export default function AdminTreeListScreen() {
                     </TouchableOpacity>
                   </View>
                 </View>
-              </View>
+              </TouchableOpacity>
             );
           }}
           ListEmptyComponent={

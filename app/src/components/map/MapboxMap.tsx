@@ -26,6 +26,8 @@ interface MapboxMapProps {
   isAddingTree?: boolean;
   pendingPin?: { lat: number; lng: number } | null;
   onMapClick?: (coords: { lat: number; lng: number }) => void;
+  maxBounds?: { ne: [number, number]; sw: [number, number] };
+  followUserLocation?: boolean;
 }
 
 const statusColors: Record<string, string> = {
@@ -43,6 +45,8 @@ export default function MapboxMap({
   isAddingTree = false,
   pendingPin = null,
   onMapClick,
+  maxBounds,
+  followUserLocation,
 }: MapboxMapProps) {
   const cameraRef = useRef<Camera>(null);
 
@@ -83,7 +87,11 @@ export default function MapboxMap({
           centerCoordinate: initialCenter,
           zoomLevel: initialZoom,
         }}
+        maxBounds={maxBounds}
+        followUserLocation={followUserLocation}
+        followZoomLevel={followUserLocation ? initialZoom : undefined}
       />
+      {followUserLocation && <Mapbox.UserLocation />}
 
       {/* Tree markers */}
       {trees.map((tree) => (

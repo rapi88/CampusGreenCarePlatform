@@ -43,7 +43,7 @@ export default function AdminUserManagementScreen() {
               <View style={styles.info}>
                 <Text style={styles.name}>{item.name}</Text>
                 <Text style={styles.email}>{item.email}</Text>
-                <Text style={styles.meta}>🌳 {item.adoptedCount || 0} trees &nbsp; 🏆 {item.score || 0} points</Text>
+                <Text style={styles.meta}>🌳 {item.adoptedTrees || 0} trees &nbsp; 🏆 {item.points || 0} points</Text>
               </View>
             </View>
           )}
