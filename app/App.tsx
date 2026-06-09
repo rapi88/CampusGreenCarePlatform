@@ -2,8 +2,19 @@ import 'react-native-gesture-handler';
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Platform } from 'react-native';
+import Toast from 'react-native-toast-message';
+import * as Notifications from 'expo-notifications';
 import RootNavigator from './src/navigation/RootNavigator';
+
+// Show notifications even when the app is in the foreground
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -16,11 +27,12 @@ export default function App() {
     <GestureHandlerRootView style={styles.root}>
       <QueryClientProvider client={queryClient}>
         <RootNavigator />
+        <Toast />
       </QueryClientProvider>
     </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
+  root: { flex: 1, height: Platform.OS === 'web' ? '100vh' : '100%' },
 });

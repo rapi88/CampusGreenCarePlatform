@@ -1,28 +1,37 @@
-// Map screen — interactive campus tree map with Mapbox + admin add-tree
 import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  TextInput, FlatList, Dimensions, Alert,
+  TextInput, FlatList, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import Toast from 'react-native-toast-message';
 import { Colors } from '../../theme/colors';
 import { Spacing, Radius, Shadow } from '../../theme/spacing';
 import StatusChip from '../../components/common/StatusChip';
-import { useMapStore, TreeData, TreeStatus } from '../../store/map.store';
+import { useMapStore, TreeStatus as FrontendTreeStatus } from '../../store/map.store';
 import { useAuthStore } from '../../store/auth.store';
-import { formatDistance } from '../../utils/formatters';
+import { formatDistance, computeHydrationStatus } from '../../utils/formatters';
 import MapboxMap from '../../components/map/MapboxMap';
 import AddTreeModal from '../../components/map/AddTreeModal';
+import { treesApi, Tree } from '../../api/trees.api';
+import { adminApi } from '../../api/admin.api';
 
-// Initial camera position (centered on the mock trees — Kocaeli area)
 const INITIAL_CENTER: [number, number] = [29.361, 40.804]; // [lng, lat]
 const INITIAL_ZOOM = 15;
+
+const USE_NEW_MAP_LIMITS = false; // Flag to toggle zoom limits and bounding box
+const CAMPUS_BOUNDS = {
+  ne: [29.380, 40.820] as [number, number],
+  sw: [29.340, 40.790] as [number, number],
+};
 
 const { width } = Dimensions.get('window');
 
 export default function MapScreen() {
   const navigation = useNavigation<any>();
+  const queryClient = useQueryClient();
   const {
     viewMode, setViewMode,
     filterStatus, setFilterStatus,
@@ -30,18 +39,55 @@ export default function MapScreen() {
     isAddingTree, setIsAddingTree,
     isSuggestingTree, setIsSuggestingTree,
     pendingPin, setPendingPin,
-    trees, addTree, addSuggestedTree,
   } = useMapStore();
   const user = useAuthStore((s) => s.user);
   const [search, setSearch] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
 
-  // Show admin features only for users with ADMIN role
   const isAdmin = user?.role === 'ADMIN';
 
-  const filtered = trees.filter((t) => {
+  // Fetch trees (only ACTIVE trees for the map)
+  const { data: activeTrees = [] } = useQuery({
+    queryKey: ['trees'],
+    queryFn: async () => {
+      const res = await treesApi.getAll({ status: 'ACTIVE' });
+      return res.data;
+    },
+  });
+
+  // Admin Create Tree Mutation
+  const createTreeMutation = useMutation({
+    mutationFn: (data: Partial<Tree>) => adminApi.createTree(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['trees'] });
+      Toast.show({ type: 'success', text1: 'Success', text2: 'Tree added successfully' });
+      setShowAddModal(false);
+      setIsAddingTree(false);
+      setPendingPin(null);
+    },
+  });
+
+  // User Suggest Tree Mutation
+  const suggestTreeMutation = useMutation({
+    mutationFn: (data: Partial<Tree>) => treesApi.suggest(data),
+    onSuccess: () => {
+      Toast.show({ type: 'success', text1: 'Success', text2: 'Tree suggestion sent for admin approval' });
+      setShowAddModal(false);
+      setIsSuggestingTree(false);
+      setPendingPin(null);
+    },
+  });
+
+  // Add hydrationStatus and distanceM
+  const processedTrees = activeTrees.map(t => ({
+    ...t,
+    distanceM: 0,
+    hydrationStatus: computeHydrationStatus(t.lastWateredAt, t.wateringPeriodDays)
+  }));
+
+  const filtered = processedTrees.filter((t) => {
     const matchSearch = t.name.toLowerCase().includes(search.toLowerCase()) || t.location.toLowerCase().includes(search.toLowerCase());
-    const matchFilter = !filterStatus || t.status === filterStatus;
+    const matchFilter = !filterStatus || t.hydrationStatus === filterStatus;
     return matchSearch && matchFilter;
   });
 
@@ -61,12 +107,10 @@ export default function MapScreen() {
 
   const handleToggleAddMode = () => {
     if (isAddingTree || isSuggestingTree) {
-      // Cancel adding/suggesting mode
       setIsAddingTree(false);
       setIsSuggestingTree(false);
       setPendingPin(null);
     } else {
-      // Enter adding/suggesting mode
       if (isAdmin) {
         setIsAddingTree(true);
       } else {
@@ -84,27 +128,26 @@ export default function MapScreen() {
 
   const handleAddTreeSubmit = (data: {
     name: string;
+    species: string;
     location: string;
-    status: TreeStatus;
+    health: 'Healthy' | 'Sick' | 'Critical';
     lat: number;
     lng: number;
   }) => {
-    const newTree: TreeData = {
-      id: Date.now().toString(),
+    const payload = {
       name: data.name,
+      species: data.species,
       location: data.location,
-      status: data.status,
-      lat: data.lat,
-      lng: data.lng,
-      distanceM: 0,
+      health: data.health,
+      latitude: data.lat,
+      longitude: data.lng,
     };
+
     if (isAddingTree) {
-      addTree(newTree);
+      createTreeMutation.mutate(payload);
     } else if (isSuggestingTree) {
-      addSuggestedTree(newTree);
-      Alert.alert('Başarılı', 'Ağaç öneriniz alındı. Admin onayından sonra haritada görünecektir.');
+      suggestTreeMutation.mutate(payload);
     }
-    setShowAddModal(false);
   };
 
   const handleCancelAdd = () => {
@@ -120,7 +163,7 @@ export default function MapScreen() {
           <Text style={styles.appName}>Tree Tracker</Text>
         </View>
         <TouchableOpacity style={styles.viewToggle} onPress={() => setViewMode(viewMode === 'map' ? 'list' : 'map')}>
-          <Text style={styles.viewToggleText}>{viewMode === 'map' ? '☰ Liste' : '🗺️ Harita'}</Text>
+          <Text style={styles.viewToggleText}>{viewMode === 'map' ? '☰ List' : '🗺️ Map'}</Text>
         </TouchableOpacity>
       </View>
 
@@ -129,7 +172,7 @@ export default function MapScreen() {
         <View style={styles.addBanner}>
           <Text style={styles.addBannerIcon}>📌</Text>
           <Text style={styles.addBannerText}>
-            Haritaya tıklayarak ağaç konumunu seçin
+            Click on the map to select the tree location
           </Text>
         </View>
       )}
@@ -141,7 +184,7 @@ export default function MapScreen() {
             <Text style={styles.searchIcon}>🔍</Text>
             <TextInput
               style={styles.searchInput}
-              placeholder="Yakınındaki bir ağacı bul..."
+              placeholder="Find a tree nearby..."
               value={search}
               onChangeText={setSearch}
               placeholderTextColor={Colors.neutralMid}
@@ -165,7 +208,7 @@ export default function MapScreen() {
               onPress={() => setFilterStatus(s as any)}
             >
               <Text style={[styles.filterText, filterStatus === s && styles.filterTextActive]}>
-                {s === null ? 'Tümü' : s === 'watered' ? '🟢 Sulandı' : s === 'needs_water' ? '🔴 Sulama Gerekli' : '🟠 Yakında'}
+                {s === null ? 'All' : s === 'watered' ? '🟢 Watered' : s === 'needs_water' ? '🔴 Needs Water' : '🟠 Due Soon'}
               </Text>
             </TouchableOpacity>
           ))}
@@ -176,17 +219,19 @@ export default function MapScreen() {
       {viewMode === 'map' && (
         <View style={styles.mapContainer}>
           <MapboxMap
-            trees={filtered}
+            trees={filtered as any}
             selectedTreeId={selectedTreeId}
             onMarkerPress={handleMarkerPress}
             initialCenter={INITIAL_CENTER}
-            initialZoom={INITIAL_ZOOM}
+            initialZoom={USE_NEW_MAP_LIMITS ? 16 : INITIAL_ZOOM}
             isAddingTree={isAddingTree || isSuggestingTree}
             pendingPin={pendingPin}
             onMapClick={handleMapClick}
+            maxBounds={USE_NEW_MAP_LIMITS ? CAMPUS_BOUNDS : undefined}
+            followUserLocation={USE_NEW_MAP_LIMITS}
           />
 
-          {/* Bottom preview card — only when NOT adding/suggesting */}
+          {/* Bottom preview card */}
           {!(isAddingTree || isSuggestingTree) && selectedTree && (
             <TouchableOpacity
               style={styles.previewCard}
@@ -199,8 +244,8 @@ export default function MapScreen() {
                 <Text style={styles.previewName}>{selectedTree.name}</Text>
                 <Text style={styles.previewLocation}>📍 {selectedTree.location}</Text>
                 <View style={styles.previewRow}>
-                  <StatusChip status={selectedTree.status} size="sm" />
-                  <Text style={styles.previewDist}>{formatDistance(selectedTree.distanceM)} uzakta</Text>
+                  <StatusChip status={selectedTree.hydrationStatus as any} size="sm" />
+                  <Text style={styles.previewDist}>{formatDistance(selectedTree.distanceM)} away</Text>
                 </View>
               </View>
               <Text style={styles.previewArrow}>›</Text>
@@ -211,14 +256,14 @@ export default function MapScreen() {
           {(isAddingTree || isSuggestingTree) && pendingPin && (
             <View style={styles.confirmCard}>
               <View style={styles.confirmInfo}>
-                <Text style={styles.confirmTitle}>📍 Konum Seçildi</Text>
+                <Text style={styles.confirmTitle}>📍 Location Selected</Text>
                 <Text style={styles.confirmCoords}>
                   {pendingPin.lat.toFixed(6)}, {pendingPin.lng.toFixed(6)}
                 </Text>
-                <Text style={styles.confirmHint}>Pin'i sürükleyerek konumu ayarlayabilirsiniz</Text>
+                <Text style={styles.confirmHint}>You can adjust the location by dragging the pin</Text>
               </View>
               <TouchableOpacity style={styles.confirmBtn} onPress={handleConfirmPin}>
-                <Text style={styles.confirmBtnText}>Devam →</Text>
+                <Text style={styles.confirmBtnText}>Continue →</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -257,7 +302,7 @@ export default function MapScreen() {
               <View style={styles.listInfo}>
                 <Text style={styles.listName}>{item.name}</Text>
                 <Text style={styles.listLoc}>📍 {item.location}</Text>
-                <StatusChip status={item.status} size="sm" />
+                <StatusChip status={item.hydrationStatus as any} size="sm" />
               </View>
               <Text style={styles.listDist}>{formatDistance(item.distanceM)}</Text>
             </TouchableOpacity>
@@ -265,7 +310,7 @@ export default function MapScreen() {
           ListEmptyComponent={
             <View style={styles.empty}>
               <Text style={styles.emptyEmoji}>🔍</Text>
-              <Text style={styles.emptyText}>Ağaç bulunamadı</Text>
+              <Text style={styles.emptyText}>No trees found</Text>
             </View>
           }
         />
@@ -277,6 +322,7 @@ export default function MapScreen() {
         coordinates={pendingPin}
         onClose={handleCancelAdd}
         onSubmit={handleAddTreeSubmit}
+        isSuggesting={isSuggestingTree}
       />
     </SafeAreaView>
   );

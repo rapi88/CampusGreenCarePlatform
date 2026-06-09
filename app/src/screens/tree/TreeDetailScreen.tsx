@@ -1,56 +1,104 @@
-// Tree Detail Screen — matches the reference screenshot design
-import React from 'react';
+// Tree Detail Screen
+import React, { useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Linking,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator
 } from 'react-native';
+import ScaleButton from '../../components/common/ScaleButton';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import Toast from 'react-native-toast-message';
 import { Colors } from '../../theme/colors';
 import { Spacing, Radius, Shadow } from '../../theme/spacing';
 import StatusChip from '../../components/common/StatusChip';
 import { formatDate, relativeTime } from '../../utils/formatters';
 import { TreeStackParamList } from '../../navigation/MainTabs';
+import { treesApi } from '../../api/trees.api';
+import { useAuthStore } from '../../store/auth.store';
 
 type Props = NativeStackScreenProps<TreeStackParamList, 'TreeDetail'>;
 
-// Mock data
-const MOCK_TREE = {
-  id: '1', name: 'Ak Meşe', species: 'Quercus pubescens', location: 'Yıldız Parkı, Beşiktaş',
-  health: 'Sağlıklı' as const, status: 'needs_water' as const,
-  photoUrl: null, isNaturalMonument: true,
-  lastWateredAt: new Date(Date.now() - 3 * 86400000).toISOString(),
-  estimatedAge: 15, height: 12,
-  plantingDate: '2009-04-22', wateringPeriodDays: 3,
-  volunteerCount: 2, maxVolunteers: 4,
-  lastCaretaker: { id: 'u1', name: 'Mehmet Yılmaz', badge: 'Sertifikalı Gönüllü', avatarInitial: 'MY' },
-};
-
 export default function TreeDetailScreen({ route, navigation }: Props) {
   const { treeId } = route.params;
-  const tree = MOCK_TREE; // Replace with: useQuery(['tree', treeId], () => treesApi.getById(treeId))
+  const queryClient = useQueryClient();
+  const { user } = useAuthStore();
+
+  const { data: treeResponse, isLoading, isError, refetch } = useQuery({
+    queryKey: ['tree', treeId],
+    queryFn: () => treesApi.getById(treeId),
+  });
+
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
+
+  const leaveAdoptionMutation = useMutation({
+    mutationFn: () => treesApi.leaveAdoption(treeId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tree', treeId] });
+      queryClient.invalidateQueries({ queryKey: ['trees'] });
+      Toast.show({ type: 'success', text1: 'Success', text2: 'You have unadopted this tree.' });
+    },
+    onError: () => {
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to unadopt the tree.' });
+    }
+  });
+
+  const tree = treeResponse?.data;
+  const isAdoptedByMe = tree?.volunteers?.some(v => v.id === user?.id) || false;
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.centerSafe}>
+        <ActivityIndicator size="large" color={Colors.greenPrimary} />
+      </SafeAreaView>
+    );
+  }
+
+  if (isError || !tree) {
+    return (
+      <SafeAreaView style={styles.centerSafe}>
+        <Text style={styles.errorText}>Failed to load tree details.</Text>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <Text style={styles.backBtnText}>Go Back</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtnHeader}>
           <Text style={styles.backIcon}>‹</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Meşe Ağacı #{treeId}</Text>
-        <TouchableOpacity style={styles.moreBtn}>
-          <Text style={styles.moreIcon}>⋯</Text>
-        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Tree #{tree.id.slice(-4)}</Text>
+        {user?.role === 'ADMIN' ? (
+          <TouchableOpacity style={styles.moreBtn} onPress={() => (navigation as any).navigate('AdminAddEditTree', { treeId })}>
+            <Text style={styles.editAdminText}>✏️ Edit</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.moreBtn} />
+        )}
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Hero Image */}
         <View style={styles.heroContainer}>
-          <View style={styles.heroImagePlaceholder}>
-            <Text style={styles.heroEmoji}>🌳</Text>
-          </View>
+          {tree.photoUrl ? (
+            <Image source={{ uri: tree.photoUrl }} style={styles.heroImage} />
+          ) : (
+            <View style={styles.heroImagePlaceholder}>
+              <Text style={styles.heroEmoji}>🌳</Text>
+            </View>
+          )}
           {tree.isNaturalMonument && (
             <View style={styles.monumentBadge}>
-              <Text style={styles.monumentText}>🌿 Doğal Anıt</Text>
+              <Text style={styles.monumentText}>🌿 Natural Monument</Text>
             </View>
           )}
         </View>
@@ -61,6 +109,7 @@ export default function TreeDetailScreen({ route, navigation }: Props) {
             <Text style={styles.treeName}>{tree.name}</Text>
             <StatusChip status={tree.health} />
           </View>
+          <Text style={styles.species}>{tree.species}</Text>
           <Text style={styles.location}>📍 {tree.location}</Text>
 
           {/* Last watering card */}
@@ -68,102 +117,115 @@ export default function TreeDetailScreen({ route, navigation }: Props) {
             <View style={styles.wateringLeft}>
               <Text style={styles.wateringIcon}>📅</Text>
               <View>
-                <Text style={styles.wateringLabel}>SON SULANMA</Text>
-                <Text style={styles.wateringDate}>{formatDate(tree.lastWateredAt)}</Text>
+                <Text style={styles.wateringLabel}>LAST WATERED</Text>
+                <Text style={styles.wateringDate}>
+                  {tree.lastWateredAt ? formatDate(tree.lastWateredAt) : 'Never'}
+                </Text>
               </View>
             </View>
-            <Text style={styles.wateringRelative}>{relativeTime(tree.lastWateredAt)}</Text>
+            <Text style={styles.wateringRelative}>
+              {tree.lastWateredAt ? relativeTime(tree.lastWateredAt) : '-'}
+            </Text>
           </View>
 
           {/* Info grid */}
           <View style={styles.grid}>
             <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>Tahmini Yaş</Text>
-              <Text style={styles.gridValue}>{tree.estimatedAge} Yıl</Text>
+              <Text style={styles.gridLabel}>Estimated Age</Text>
+              <Text style={styles.gridValue}>{tree.estimatedAge} Years</Text>
             </View>
             <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>Yükseklik</Text>
-              <Text style={styles.gridValue}>{tree.height} Metre</Text>
+              <Text style={styles.gridLabel}>Height</Text>
+              <Text style={styles.gridValue}>{tree.height} Meters</Text>
             </View>
             <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>Sulama Periyodu</Text>
-              <Text style={styles.gridValue}>{tree.wateringPeriodDays} Gün</Text>
+              <Text style={styles.gridLabel}>Watering Period</Text>
+              <Text style={styles.gridValue}>{tree.wateringPeriodDays} Days</Text>
             </View>
-            <View style={styles.gridCell}>
-              <Text style={styles.gridLabel}>Gönüllüler</Text>
+            <TouchableOpacity style={styles.gridCell} onPress={() => navigation.navigate('Adoption', { treeId })}>
+              <Text style={styles.gridLabel}>Volunteers</Text>
               <Text style={styles.gridValue}>{tree.volunteerCount}/{tree.maxVolunteers}</Text>
-            </View>
+            </TouchableOpacity>
           </View>
 
-          {/* Last caretaker */}
+          {/* Adoption Info */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionIcon}>🕐</Text>
-              <Text style={styles.sectionTitle}>Son Bakım Yapan</Text>
+              <Text style={styles.sectionIcon}>🤝</Text>
+              <Text style={styles.sectionTitle}>Adoption Info</Text>
             </View>
-            <View style={styles.caretakerRow}>
+            <TouchableOpacity style={styles.caretakerRow} onPress={() => navigation.navigate('Adoption', { treeId })}>
               <View style={styles.avatarCircle}>
-                <Text style={styles.avatarInitial}>{tree.lastCaretaker.avatarInitial}</Text>
+                <Text style={styles.avatarInitial}>{'?'}</Text>
               </View>
               <View style={styles.caretakerInfo}>
-                <Text style={styles.caretakerName}>{tree.lastCaretaker.name}</Text>
-                <Text style={styles.caretakerBadge}>{tree.lastCaretaker.badge}</Text>
+                <Text style={styles.caretakerName}>Volunteers</Text>
+                <Text style={styles.caretakerBadge}>{tree.volunteerCount} users adopted</Text>
               </View>
-              <TouchableOpacity>
-                <Text style={styles.profileLink}>Profil</Text>
-              </TouchableOpacity>
-            </View>
+              {tree.isAdopted ? (
+                <Text style={styles.profileLink}>Adopted ›</Text>
+              ) : (
+                <Text style={styles.profileLink}>Available ›</Text>
+              )}
+            </TouchableOpacity>
           </View>
 
           {/* Quick action buttons: Chat & Notes */}
           <View style={styles.quickActions}>
-            <TouchableOpacity
+            <ScaleButton
               style={styles.quickActionBtn}
               onPress={() => navigation.navigate('Chat', { treeId, treeName: tree.name })}
             >
               <Text style={styles.quickActionEmoji}>💬</Text>
-              <Text style={styles.quickActionText}>Sohbet</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+              <Text style={styles.quickActionText}>Chat</Text>
+            </ScaleButton>
+            <ScaleButton
               style={styles.quickActionBtn}
               onPress={() => navigation.navigate('Notes', { treeId, treeName: tree.name })}
             >
               <Text style={styles.quickActionEmoji}>📝</Text>
-              <Text style={styles.quickActionText}>Notlar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.quickActionBtn}
-              onPress={() => navigation.navigate('Adoption', { treeId })}
-            >
-              <Text style={styles.quickActionEmoji}>🤝</Text>
-              <Text style={styles.quickActionText}>Sahiplen</Text>
-            </TouchableOpacity>
+              <Text style={styles.quickActionText}>Notes</Text>
+            </ScaleButton>
+            {isAdoptedByMe ? (
+              <ScaleButton
+                style={styles.quickActionBtn}
+                onPress={() => leaveAdoptionMutation.mutate()}
+                disabled={leaveAdoptionMutation.isPending}
+              >
+                {leaveAdoptionMutation.isPending ? (
+                  <ActivityIndicator color={Colors.error} />
+                ) : (
+                  <>
+                    <Text style={styles.quickActionEmoji}>👋</Text>
+                    <Text style={[styles.quickActionText, { color: Colors.error }]}>Unadopt</Text>
+                  </>
+                )}
+              </ScaleButton>
+            ) : (
+              <ScaleButton
+                style={styles.quickActionBtn}
+                onPress={() => navigation.navigate('Adoption', { treeId })}
+              >
+                <Text style={styles.quickActionEmoji}>🤝</Text>
+                <Text style={styles.quickActionText}>Adopt</Text>
+              </ScaleButton>
+            )}
           </View>
 
           {/* Primary CTA */}
-          <TouchableOpacity
+          <ScaleButton
             style={styles.waterBtn}
             onPress={() => navigation.navigate('Watering', { treeId })}
           >
-            <Text style={styles.waterBtnText}>🚿 Ağacı Sula</Text>
-          </TouchableOpacity>
+            <Text style={styles.waterBtnText}>🚿 Water Tree</Text>
+          </ScaleButton>
 
-          {/* Secondary actions */}
-          <View style={styles.secondaryRow}>
-            <TouchableOpacity style={styles.secondaryBtn}>
-              <Text style={styles.secondaryText}>⚠️ Sorun Bildir</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.secondaryBtn}
-              onPress={() => navigation.navigate('Notes', { treeId, treeName: tree.name })}
-            >
-              <Text style={styles.secondaryText}>📝 Not Ekle</Text>
-            </TouchableOpacity>
-          </View>
+
 
           {/* Eco info */}
           <View style={styles.ecoBox}>
             <Text style={styles.ecoText}>
-              ℹ️ Bu ağaç yerel ekosistemin bir parçasıdır. Sulama yaparken lütfen çevreyi kirletmemeye özen gösterin.
+              ℹ️ This tree is part of the local ecosystem. Please be careful not to pollute the environment while watering.
             </Text>
           </View>
         </View>
@@ -174,17 +236,23 @@ export default function TreeDetailScreen({ route, navigation }: Props) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.neutralBg },
+  centerSafe: { flex: 1, backgroundColor: Colors.neutralBg, alignItems: 'center', justifyContent: 'center' },
+  errorText: { fontSize: 16, color: Colors.neutralMid, marginBottom: 16 },
+  backBtn: { padding: 12, backgroundColor: Colors.greenPrimary, borderRadius: Radius.md },
+  backBtnText: { color: Colors.white, fontWeight: '600' },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm,
     backgroundColor: Colors.white,
   },
-  backBtn: { padding: 8 },
+  backBtnHeader: { padding: 8 },
   backIcon: { fontSize: 28, color: Colors.neutralDark, fontWeight: '300' },
   headerTitle: { fontSize: 16, fontWeight: '600', color: Colors.neutralDark },
-  moreBtn: { padding: 8 },
+  moreBtn: { padding: 8, minWidth: 60, alignItems: 'flex-end' },
   moreIcon: { fontSize: 22, color: Colors.neutralDark },
+  editAdminText: { fontSize: 13, fontWeight: '700', color: Colors.greenPrimary },
   heroContainer: { position: 'relative' },
+  heroImage: { height: 240, width: '100%', resizeMode: 'cover' },
   heroImagePlaceholder: {
     height: 240, backgroundColor: Colors.greenLight,
     alignItems: 'center', justifyContent: 'center',
@@ -199,6 +267,7 @@ const styles = StyleSheet.create({
   body: { padding: Spacing.md },
   titleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
   treeName: { fontSize: 26, fontWeight: '700', color: Colors.neutralDark },
+  species: { fontSize: 14, fontStyle: 'italic', color: Colors.neutralMid, marginBottom: 4 },
   location: { fontSize: 13, color: Colors.neutralMid, marginBottom: Spacing.md },
   wateringCard: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -245,12 +314,7 @@ const styles = StyleSheet.create({
     height: 56, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.sm,
   },
   waterBtnText: { color: Colors.white, fontSize: 17, fontWeight: '700' },
-  secondaryRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.md },
-  secondaryBtn: {
-    flex: 1, backgroundColor: Colors.white, borderRadius: Radius.md, height: 48,
-    alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: Colors.neutralLight,
-  },
-  secondaryText: { fontSize: 14, fontWeight: '500', color: Colors.neutralDark },
+
   ecoBox: {
     backgroundColor: Colors.greenLight, borderRadius: Radius.md, padding: Spacing.md,
     marginBottom: Spacing.xxl,

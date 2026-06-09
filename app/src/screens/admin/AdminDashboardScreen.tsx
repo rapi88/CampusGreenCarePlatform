@@ -1,88 +1,86 @@
 // Admin Dashboard
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import ScaleButton from '../../components/common/ScaleButton';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useQuery } from '@tanstack/react-query';
+import Toast from 'react-native-toast-message';
 import { Colors } from '../../theme/colors';
 import { Spacing, Radius, Shadow } from '../../theme/spacing';
 import { useAuthStore } from '../../store/auth.store';
-import { useAwardStore } from '../../store/award.store';
-
-const STATS = [
-  { label: 'Toplam Ağaç', value: '128', icon: '🌳' },
-  { label: 'Aktif Gönüllü', value: '47', icon: '👥' },
-  { label: 'Bugün Sulama', value: '23', icon: '💧' },
-  { label: 'Açık Sorun', value: '5', icon: '⚠️' },
-];
+import { adminApi } from '../../api/admin.api';
 
 export default function AdminDashboardScreen() {
   const navigation = useNavigation<any>();
   const { clearAuth } = useAuthStore();
-  const { topWatererPhotoUrl, setTopWatererPhotoUrl, awardText, setAwardText } = useAwardStore();
-  const [awardUrl, setAwardUrl] = React.useState(topWatererPhotoUrl || '');
-  const [localAwardText, setLocalAwardText] = React.useState(awardText || '');
+
+  const { data: statsResponse, isLoading } = useQuery({
+    queryKey: ['admin', 'stats'],
+    queryFn: () => adminApi.getStats(),
+  });
+
+  const stats = statsResponse?.data || {
+    totalTrees: 0,
+    activeVolunteers: 0,
+    wateringsToday: 0,
+  };
+
+  const handleLogout = async () => {
+    await AsyncStorage.removeItem('token');
+    clearAuth();
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>🌿 Admin Panel</Text>
-        <TouchableOpacity onPress={clearAuth}><Text style={styles.logout}>Çıkış</Text></TouchableOpacity>
+        <TouchableOpacity onPress={handleLogout}><Text style={styles.logout}>Logout</Text></TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
         {/* Stats grid */}
-        <View style={styles.statsGrid}>
-          {STATS.map((s) => (
-            <View key={s.label} style={styles.statCard}>
-              <Text style={styles.statIcon}>{s.icon}</Text>
-              <Text style={styles.statValue}>{s.value}</Text>
-              <Text style={styles.statLabel}>{s.label}</Text>
+        {isLoading ? (
+          <ActivityIndicator size="large" color={Colors.greenPrimary} style={{ marginVertical: Spacing.xl }} />
+        ) : (
+          <View style={styles.statsGrid}>
+            <ScaleButton style={styles.statCard} onPress={() => navigation.navigate('AdminTreeList')}>
+              <Text style={styles.statIcon}>🌳</Text>
+              <Text style={styles.statValue}>{stats.totalTrees || 0}</Text>
+              <Text style={styles.statLabel}>Total Trees</Text>
+            </ScaleButton>
+            <ScaleButton style={styles.statCard} onPress={() => navigation.navigate('AdminUserManagement')}>
+              <Text style={styles.statIcon}>👥</Text>
+              <Text style={styles.statValue}>{stats.activeVolunteers || 0}</Text>
+              <Text style={styles.statLabel}>Volunteers</Text>
+            </ScaleButton>
+            <View style={styles.statCard}>
+              <Text style={styles.statIcon}>💧</Text>
+              <Text style={styles.statValue}>{stats.wateringsToday || 0}</Text>
+              <Text style={styles.statLabel}>Waterings Today</Text>
             </View>
-          ))}
-        </View>
+          </View>
+        )}
 
-        <Text style={styles.sectionTitle}>Hızlı İşlemler</Text>
+        <Text style={styles.sectionTitle}>Quick Actions</Text>
 
         {/* Quick actions */}
         {[
-          { icon: '🌟 Ağaç Önerileri', screen: 'AdminTreeSuggestions', params: {} },
-          { icon: '+ Ağaç Ekle', screen: 'AdminAddEditTree', params: {} },
-          { icon: '🌳 Ağaç Listesi', screen: 'AdminTreeList', params: {} },
-          { icon: '📊 Sulama Raporları', screen: 'AdminReports', params: {} },
-          { icon: '👥 Kullanıcı Yönetimi', screen: 'AdminUserManagement', params: {} },
+          { icon: '🌟 Tree Suggestions', screen: 'AdminTreeSuggestions', params: {} },
+          { icon: '+ Add Tree', screen: 'AdminAddEditTree', params: {} },
+          { icon: '🌳 Tree List', screen: 'AdminTreeList', params: {} },
+          { icon: '📊 Watering Reports', screen: 'AdminReports', params: {} },
+          { icon: '👥 User Management', screen: 'AdminUserManagement', params: {} },
+          ...(process.env.EXPO_PUBLIC_NOTIFICATION_DEBUG === 'true'
+            ? [{ icon: '🔔 Notification Test Center', screen: 'AdminNotificationTest', params: {} }]
+            : []),
         ].map((a) => (
-          <TouchableOpacity key={a.icon} style={styles.actionBtn} onPress={() => navigation.navigate(a.screen, a.params)}>
+          <ScaleButton key={a.icon} style={styles.actionBtn} onPress={() => navigation.navigate(a.screen, a.params)}>
             <Text style={styles.actionBtnText}>{a.icon}</Text>
             <Text style={styles.actionArrow}>›</Text>
-          </TouchableOpacity>
+          </ScaleButton>
         ))}
-        <Text style={[styles.sectionTitle, { marginTop: Spacing.md }]}>Haftanın Ödülü</Text>
-        <View style={styles.awardBox}>
-          <View style={styles.awardInputs}>
-            <TextInput
-              style={styles.awardInput}
-              placeholder="Fotoğraf URL'sini yapıştırın..."
-              value={awardUrl}
-              onChangeText={setAwardUrl}
-            />
-            <TextInput
-              style={styles.awardInput}
-              placeholder="Ödül üzerine yazılacak metin..."
-              value={localAwardText}
-              onChangeText={setLocalAwardText}
-            />
-          </View>
-          <TouchableOpacity
-            style={styles.awardSaveBtn}
-            onPress={() => {
-              setTopWatererPhotoUrl(awardUrl);
-              setAwardText(localAwardText);
-              alert('Ödül güncellendi!');
-            }}
-          >
-            <Text style={styles.awardSaveText}>Kaydet</Text>
-          </TouchableOpacity>
-        </View>
 
       </ScrollView>
     </SafeAreaView>
@@ -110,26 +108,4 @@ const styles = StyleSheet.create({
   },
   actionBtnText: { flex: 1, fontSize: 15, fontWeight: '600', color: Colors.neutralDark },
   actionArrow: { fontSize: 22, color: Colors.neutralLight },
-  awardBox: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-    marginBottom: Spacing.lg,
-  },
-  awardInputs: {
-    flex: 1,
-    gap: Spacing.xs,
-  },
-  awardInput: {
-    backgroundColor: Colors.white,
-    padding: Spacing.sm,
-    borderRadius: Radius.md,
-    ...Shadow.card,
-  },
-  awardSaveBtn: {
-    backgroundColor: Colors.greenPrimary,
-    justifyContent: 'center',
-    paddingHorizontal: Spacing.md,
-    borderRadius: Radius.md,
-  },
-  awardSaveText: { color: Colors.white, fontWeight: '600' },
 });

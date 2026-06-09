@@ -4,15 +4,22 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
-
 // ── Enums ──────────────────────────────────────────────
 
 enum Role {
   USER
   ADMIN
+}
+
+enum TreeStatus {
+  PENDING
+  DENIED
+  ACTIVE
+  REMOVED
 }
 
 enum Health {
@@ -28,6 +35,8 @@ model User {
   name          String
   email         String   @unique
   passwordHash  String
+  isVerified    Boolean  @default(false)
+  verifyToken   String?
   role          Role     @default(USER)
   points        Int      @default(0)
   avatarUrl     String?
@@ -39,7 +48,7 @@ model User {
   wateringEvents WateringEvent[]
   chatMessages   ChatMessage[]
   notes          TreeNote[]
-  issueReports   IssueReport[]
+  suggestions    TreeSuggestion[]
 
   @@index([email])
   @@index([role])
@@ -57,7 +66,7 @@ model Tree {
   height             Float    @default(0)
   plantingDate       DateTime?
   wateringPeriodDays Int      @default(3)
-  isApproved         Boolean  @default(true)
+  status             TreeStatus @default(ACTIVE)
   isNaturalMonument  Boolean  @default(false)
   health             Health   @default(HEALTHY)
   maxVolunteers      Int      @default(4)
@@ -68,7 +77,7 @@ model Tree {
   wateringEvents WateringEvent[]
   chatMessages   ChatMessage[]
   notes          TreeNote[]
-  issueReports   IssueReport[]
+  suggestion     TreeSuggestion?
 
   @@index([latitude, longitude])
 }
@@ -85,6 +94,19 @@ model Adoption {
   @@unique([userId, treeId])
   @@index([userId])
   @@index([treeId])
+}
+
+model TreeSuggestion {
+  id        String   @id @default(uuid())
+  treeId    String   @unique
+  userId    String
+  dismissed Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  tree Tree @relation(fields: [treeId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model WateringEvent {
@@ -128,21 +150,6 @@ model TreeNote {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([treeId, createdAt])
-}
-
-model IssueReport {
-  id          String   @id @default(uuid())
-  treeId      String
-  userId      String
-  description String
-  resolved    Boolean  @default(false)
-  createdAt   DateTime @default(now())
-
-  tree Tree @relation(fields: [treeId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([treeId])
-  @@index([resolved])
 }
 
 model Setting {

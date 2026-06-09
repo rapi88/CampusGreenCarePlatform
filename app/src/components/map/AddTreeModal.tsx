@@ -14,29 +14,33 @@ interface AddTreeModalProps {
   onClose: () => void;
   onSubmit: (data: {
     name: string;
+    species: string;
     location: string;
-    status: TreeStatus;
+    health: 'Healthy' | 'Sick' | 'Critical';
     lat: number;
     lng: number;
   }) => void;
+  isSuggesting?: boolean;
 }
 
-const STATUS_OPTIONS: { value: TreeStatus; label: string; emoji: string; color: string }[] = [
-  { value: 'watered', label: 'Sulandı', emoji: '🟢', color: Colors.statusOk },
-  { value: 'needs_water', label: 'Sulama Gerekli', emoji: '🔴', color: Colors.statusDue },
-  { value: 'due_soon', label: 'Yakında Sulanmalı', emoji: '🟠', color: Colors.statusSoon },
+const HEALTH_OPTIONS: { value: 'Healthy' | 'Sick' | 'Critical'; label: string; emoji: string; color: string }[] = [
+  { value: 'Healthy', label: 'Healthy', emoji: '🟢', color: Colors.statusOk },
+  { value: 'Sick', label: 'Sick', emoji: '🟠', color: Colors.statusSoon },
+  { value: 'Critical', label: 'Critical', emoji: '🔴', color: Colors.statusDue },
 ];
 
-export default function AddTreeModal({ visible, coordinates, onClose, onSubmit }: AddTreeModalProps) {
+export default function AddTreeModal({ visible, coordinates, onClose, onSubmit, isSuggesting = false }: AddTreeModalProps) {
   const [name, setName] = useState('');
+  const [species, setSpecies] = useState('');
   const [location, setLocation] = useState('');
-  const [status, setStatus] = useState<TreeStatus>('needs_water');
-  const [errors, setErrors] = useState<{ name?: string; location?: string }>({});
+  const [health, setHealth] = useState<'Healthy' | 'Sick' | 'Critical'>('Healthy');
+  const [errors, setErrors] = useState<{ name?: string; species?: string; location?: string }>({});
 
   const handleSubmit = () => {
     const newErrors: typeof errors = {};
-    if (!name.trim()) newErrors.name = 'Ağaç adı gerekli';
-    if (!location.trim()) newErrors.location = 'Konum açıklaması gerekli';
+    if (!name.trim()) newErrors.name = 'Tree name required';
+    if (!species.trim()) newErrors.species = 'Species required';
+    if (!location.trim()) newErrors.location = 'Location description required';
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -47,23 +51,26 @@ export default function AddTreeModal({ visible, coordinates, onClose, onSubmit }
 
     onSubmit({
       name: name.trim(),
+      species: species.trim(),
       location: location.trim(),
-      status,
+      health,
       lat: coordinates.lat,
       lng: coordinates.lng,
     });
 
     // Reset form
     setName('');
+    setSpecies('');
     setLocation('');
-    setStatus('needs_water');
+    setHealth('Healthy');
     setErrors({});
   };
 
   const handleClose = () => {
     setName('');
+    setSpecies('');
     setLocation('');
-    setStatus('needs_water');
+    setHealth('Healthy');
     setErrors({});
     onClose();
   };
@@ -85,7 +92,7 @@ export default function AddTreeModal({ visible, coordinates, onClose, onSubmit }
             <View style={styles.modalHeader}>
               <View style={styles.headerTitle}>
                 <Text style={styles.headerEmoji}>🌱</Text>
-                <Text style={styles.headerText}>Yeni Ağaç Ekle</Text>
+                <Text style={styles.headerText}>{isSuggesting ? 'Suggest a Tree' : 'Add New Tree'}</Text>
               </View>
               <TouchableOpacity style={styles.closeBtn} onPress={handleClose}>
                 <Text style={styles.closeBtnText}>✕</Text>
@@ -98,7 +105,7 @@ export default function AddTreeModal({ visible, coordinates, onClose, onSubmit }
                 <View style={styles.coordsCard}>
                   <Text style={styles.coordsIcon}>📍</Text>
                   <View style={styles.coordsInfo}>
-                    <Text style={styles.coordsLabel}>Seçilen Konum</Text>
+                    <Text style={styles.coordsLabel}>Selected Location</Text>
                     <Text style={styles.coordsText}>
                       {coordinates.lat.toFixed(6)}, {coordinates.lng.toFixed(6)}
                     </Text>
@@ -108,10 +115,10 @@ export default function AddTreeModal({ visible, coordinates, onClose, onSubmit }
 
               {/* Tree name */}
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Ağaç Adı *</Text>
+                <Text style={styles.fieldLabel}>Tree Name *</Text>
                 <TextInput
                   style={[styles.input, errors.name ? styles.inputError : null]}
-                  placeholder="örn. Ak Meşe #048"
+                  placeholder="e.g. White Oak #048"
                   value={name}
                   onChangeText={(t) => { setName(t); setErrors((e) => ({ ...e, name: undefined })); }}
                   placeholderTextColor={Colors.neutralMid}
@@ -119,12 +126,25 @@ export default function AddTreeModal({ visible, coordinates, onClose, onSubmit }
                 {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
               </View>
 
+              {/* Species */}
+              <View style={styles.fieldGroup}>
+                <Text style={styles.fieldLabel}>Species *</Text>
+                <TextInput
+                  style={[styles.input, errors.species ? styles.inputError : null]}
+                  placeholder="e.g. Quercus alba"
+                  value={species}
+                  onChangeText={(t) => { setSpecies(t); setErrors((e) => ({ ...e, species: undefined })); }}
+                  placeholderTextColor={Colors.neutralMid}
+                />
+                {errors.species && <Text style={styles.errorText}>{errors.species}</Text>}
+              </View>
+
               {/* Location description */}
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Konum Açıklaması *</Text>
+                <Text style={styles.fieldLabel}>Location Description *</Text>
                 <TextInput
                   style={[styles.input, errors.location ? styles.inputError : null]}
-                  placeholder="örn. Kütüphane Önü, B Blok"
+                  placeholder="e.g. Front of Library, Block B"
                   value={location}
                   onChangeText={(t) => { setLocation(t); setErrors((e) => ({ ...e, location: undefined })); }}
                   placeholderTextColor={Colors.neutralMid}
@@ -132,23 +152,23 @@ export default function AddTreeModal({ visible, coordinates, onClose, onSubmit }
                 {errors.location && <Text style={styles.errorText}>{errors.location}</Text>}
               </View>
 
-              {/* Status selection */}
+              {/* Health selection */}
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Sulama Durumu</Text>
+                <Text style={styles.fieldLabel}>Tree Health</Text>
                 <View style={styles.statusOptions}>
-                  {STATUS_OPTIONS.map((opt) => (
+                  {HEALTH_OPTIONS.map((opt) => (
                     <TouchableOpacity
                       key={opt.value}
                       style={[
                         styles.statusOption,
-                        status === opt.value && { borderColor: opt.color, backgroundColor: opt.color + '15' },
+                        health === opt.value && { borderColor: opt.color, backgroundColor: opt.color + '15' },
                       ]}
-                      onPress={() => setStatus(opt.value)}
+                      onPress={() => setHealth(opt.value)}
                     >
                       <Text style={styles.statusEmoji}>{opt.emoji}</Text>
                       <Text style={[
                         styles.statusLabel,
-                        status === opt.value && { color: opt.color, fontWeight: '700' },
+                        health === opt.value && { color: opt.color, fontWeight: '700' },
                       ]}>
                         {opt.label}
                       </Text>
@@ -161,10 +181,10 @@ export default function AddTreeModal({ visible, coordinates, onClose, onSubmit }
             {/* Actions */}
             <View style={styles.actions}>
               <TouchableOpacity style={styles.cancelBtn} onPress={handleClose}>
-                <Text style={styles.cancelBtnText}>İptal</Text>
+                <Text style={styles.cancelBtnText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
-                <Text style={styles.submitBtnText}>🌳 Ağaç Ekle</Text>
+                <Text style={styles.submitBtnText}>{isSuggesting ? '🌟 Suggest Tree' : '🌳 Add Tree'}</Text>
               </TouchableOpacity>
             </View>
           </View>
