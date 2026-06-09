@@ -9,7 +9,7 @@ export const notesController = {
       const treeId = req.params.treeId as string;
 
       const tree = await prisma.tree.findUnique({ where: { id: treeId } });
-      if (!tree) throw new NotFoundError('Ağaç bulunamadı');
+      if (!tree) throw new NotFoundError('Tree not found');
 
       const notes = await prisma.treeNote.findMany({
         where: { treeId },
@@ -41,7 +41,7 @@ export const notesController = {
       const { text } = req.body;
 
       const tree = await prisma.tree.findUnique({ where: { id: treeId } });
-      if (!tree) throw new NotFoundError('Ağaç bulunamadı');
+      if (!tree) throw new NotFoundError('Tree not found');
 
       const note = await prisma.treeNote.create({
         data: {
@@ -85,7 +85,7 @@ export const notesController = {
       }
 
       await prisma.treeNote.delete({ where: { id: noteId } });
-      res.json({ message: 'Not silindi' });
+      res.json({ message: 'Note deleted' });
     } catch (error) {
       next(error);
     }

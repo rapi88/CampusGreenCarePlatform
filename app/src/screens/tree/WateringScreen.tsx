@@ -1,18 +1,20 @@
 // GPS-verified watering screen
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, ActivityIndicator } from 'react-native';
+import ScaleButton from '../../components/common/ScaleButton';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as Location from 'expo-location';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import Toast from 'react-native-toast-message';
 import { Colors } from '../../theme/colors';
 import { Spacing, Radius } from '../../theme/spacing';
 import { TreeStackParamList } from '../../navigation/MainTabs';
+import { treesApi } from '../../api/trees.api';
 
 type Props = NativeStackScreenProps<TreeStackParamList, 'Watering'>;
 
-// Mock tree coordinates
-const TREE_COORDS = { lat: 40.8040, lng: 29.3610 };
-const THRESHOLD_M = 10;
+const THRESHOLD_M = 200; // Expanded to 200m for easier testing, in prod you might want 10m
 
 function haversine(lat1: number, lon1: number, lat2: number, lon2: number) {
   const R = 6371000;
@@ -25,20 +27,49 @@ function haversine(lat1: number, lon1: number, lat2: number, lon2: number) {
 
 export default function WateringScreen({ route, navigation }: Props) {
   const { treeId } = route.params;
+  const queryClient = useQueryClient();
   const [phase, setPhase] = useState<'checking' | 'ready' | 'far' | 'success' | 'error'>('checking');
   const [distanceM, setDistanceM] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [currentCoords, setCurrentCoords] = useState<{ lat: number; lng: number } | null>(null);
   const scaleAnim = new Animated.Value(0);
 
-  useEffect(() => { checkLocation(); }, []);
+  const { data: treeResponse } = useQuery({
+    queryKey: ['tree', treeId],
+    queryFn: () => treesApi.getById(treeId),
+  });
+  
+  const treeCoords = useMemo(() => {
+    return treeResponse?.data ? { lat: treeResponse.data.latitude, lng: treeResponse.data.longitude } : null;
+  }, [treeResponse?.data?.latitude, treeResponse?.data?.longitude]);
+
+  const waterMutation = useMutation({
+    mutationFn: (coords: { lat: number; lng: number }) => treesApi.water(treeId, coords),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tree', treeId] });
+      queryClient.invalidateQueries({ queryKey: ['trees'] });
+      setPhase('success');
+      Animated.spring(scaleAnim, { toValue: 1, tension: 60, friction: 7, useNativeDriver: true }).start();
+    },
+    onError: () => {
+      setPhase('error');
+    }
+  });
+
+  useEffect(() => {
+    if (treeCoords) {
+      checkLocation();
+    }
+  }, [treeCoords]);
 
   const checkLocation = async () => {
+    if (!treeCoords) return;
     setPhase('checking');
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') { setPhase('error'); return; }
       const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
-      const dist = haversine(loc.coords.latitude, loc.coords.longitude, TREE_COORDS.lat, TREE_COORDS.lng);
+      setCurrentCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+      const dist = haversine(loc.coords.latitude, loc.coords.longitude, treeCoords.lat, treeCoords.lng);
       setDistanceM(Math.round(dist));
       setPhase(dist <= THRESHOLD_M ? 'ready' : 'far');
     } catch {
@@ -46,25 +77,17 @@ export default function WateringScreen({ route, navigation }: Props) {
     }
   };
 
-  const handleWater = async () => {
-    setLoading(true);
-    try {
-      // await treesApi.water(treeId, { lat, lng });
-      await new Promise((r) => setTimeout(r, 1200)); // simulate API
-      setPhase('success');
-      Animated.spring(scaleAnim, { toValue: 1, tension: 60, friction: 7, useNativeDriver: true }).start();
-    } catch {
-      setPhase('error');
-    } finally {
-      setLoading(false);
+  const handleWater = () => {
+    if (currentCoords) {
+      waterMutation.mutate(currentCoords);
     }
   };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.back}>‹ Geri</Text></TouchableOpacity>
-        <Text style={styles.headerTitle}>Ağacı Sula</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.back}>‹ Back</Text></TouchableOpacity>
+        <Text style={styles.headerTitle}>Water Tree</Text>
         <View style={{ width: 60 }} />
       </View>
 
@@ -72,7 +95,7 @@ export default function WateringScreen({ route, navigation }: Props) {
         {phase === 'checking' && (
           <View style={styles.center}>
             <ActivityIndicator size="large" color={Colors.greenPrimary} />
-            <Text style={styles.statusText}>Konumunuz alınıyor…</Text>
+            <Text style={styles.statusText}>Checking location…</Text>
           </View>
         )}
 
@@ -80,28 +103,28 @@ export default function WateringScreen({ route, navigation }: Props) {
           <>
             <View style={[styles.distanceCard, phase === 'ready' ? styles.distCardOk : styles.distCardFar]}>
               <Text style={styles.distEmoji}>{phase === 'ready' ? '✅' : '❌'}</Text>
-              <Text style={styles.distLabel}>Ağaca uzaklığınız</Text>
+              <Text style={styles.distLabel}>Distance to tree</Text>
               <Text style={[styles.distValue, { color: phase === 'ready' ? Colors.greenDark : Colors.error }]}>
-                {distanceM} metre
+                {distanceM} meters
               </Text>
               {phase === 'far' && (
-                <Text style={styles.farNote}>Sulama için ağacın yanında ({THRESHOLD_M} m içinde) olmanız gerekiyor.</Text>
+                <Text style={styles.farNote}>You need to be closer to the tree (within {THRESHOLD_M} m) to water it.</Text>
               )}
             </View>
 
-            <TouchableOpacity
+            <ScaleButton
               style={[styles.waterBtn, phase === 'far' && styles.waterBtnDisabled]}
-              disabled={phase === 'far' || loading}
+              disabled={phase === 'far' || waterMutation.isPending}
               onPress={handleWater}
             >
-              {loading
+              {waterMutation.isPending
                 ? <ActivityIndicator color={Colors.white} />
-                : <Text style={styles.waterBtnText}>🚿 Sulamayı Onayla</Text>
+                : <Text style={styles.waterBtnText}>🚿 Confirm Watering</Text>
               }
-            </TouchableOpacity>
+            </ScaleButton>
 
             <TouchableOpacity style={styles.retryBtn} onPress={checkLocation}>
-              <Text style={styles.retryText}>↻ Konumu Yenile</Text>
+              <Text style={styles.retryText}>↻ Refresh Location</Text>
             </TouchableOpacity>
           </>
         )}
@@ -109,11 +132,11 @@ export default function WateringScreen({ route, navigation }: Props) {
         {phase === 'success' && (
           <Animated.View style={[styles.center, { transform: [{ scale: scaleAnim }] }]}>
             <Text style={styles.successEmoji}>🌱</Text>
-            <Text style={styles.successTitle}>Teşekkürler!</Text>
-            <Text style={styles.successSub}>Ağacı başarıyla suladınız.</Text>
-            <View style={styles.pointsBadge}><Text style={styles.pointsText}>+10 puan 🏆</Text></View>
+            <Text style={styles.successTitle}>Thank You!</Text>
+            <Text style={styles.successSub}>You have successfully watered the tree.</Text>
+            <View style={styles.pointsBadge}><Text style={styles.pointsText}>+10 points 🏆</Text></View>
             <TouchableOpacity style={styles.doneBtn} onPress={() => navigation.goBack()}>
-              <Text style={styles.doneBtnText}>Geri Dön</Text>
+              <Text style={styles.doneBtnText}>Go Back</Text>
             </TouchableOpacity>
           </Animated.View>
         )}
@@ -121,8 +144,8 @@ export default function WateringScreen({ route, navigation }: Props) {
         {phase === 'error' && (
           <View style={styles.center}>
             <Text style={styles.successEmoji}>⚠️</Text>
-            <Text style={styles.successTitle}>Konum alınamadı</Text>
-            <TouchableOpacity style={styles.retryBtn} onPress={checkLocation}><Text style={styles.retryText}>Tekrar Dene</Text></TouchableOpacity>
+            <Text style={styles.successTitle}>Could not get location</Text>
+            <TouchableOpacity style={styles.retryBtn} onPress={checkLocation}><Text style={styles.retryText}>Try Again</Text></TouchableOpacity>
           </View>
         )}
       </View>

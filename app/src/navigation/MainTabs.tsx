@@ -26,6 +26,7 @@ import AdminAddEditTreeScreen from '../screens/admin/AdminAddEditTreeScreen';
 import AdminReportsScreen from '../screens/admin/AdminReportsScreen';
 import AdminUserManagementScreen from '../screens/admin/AdminUserManagementScreen';
 import AdminTreeSuggestionsScreen from '../screens/admin/AdminTreeSuggestionsScreen';
+import AdminNotificationTestScreen from '../screens/admin/AdminNotificationTestScreen';
 
 export type TreeStackParamList = {
   TreeDetail: { treeId: string };
@@ -51,6 +52,7 @@ export type AppStackParamList = TreeStackParamList & {
   AdminReports: undefined;
   AdminUserManagement: undefined;
   AdminTreeSuggestions: undefined;
+  AdminNotificationTest: undefined;
 };
 
 const Tab = createBottomTabNavigator<MainTabsParamList>();
@@ -136,6 +138,7 @@ export default function MainTabs() {
       <AppStack.Screen name="AdminReports" component={AdminReportsScreen} />
       <AppStack.Screen name="AdminUserManagement" component={AdminUserManagementScreen} />
       <AppStack.Screen name="AdminTreeSuggestions" component={AdminTreeSuggestionsScreen} />
+      <AppStack.Screen name="AdminNotificationTest" component={AdminNotificationTestScreen} />
     </AppStack.Navigator>
   );
 }

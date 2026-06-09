@@ -6,8 +6,10 @@ export interface User {
   name: string;
   email: string;
   role: 'USER' | 'ADMIN';
-  avatarUrl?: string;
+  avatarUrl: string | null;
   points: number;
+  adoptedTreeCount?: number;
+  totalWaterings?: number;
   adoptedTreeIds: string[];
 }
 
@@ -18,6 +20,7 @@ interface AuthState {
   setAuth: (user: User, token: string) => void;
   clearAuth: () => void;
   setLoading: (val: boolean) => void;
+  updateUser: (updates: Partial<User>) => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -27,4 +30,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   setAuth: (user, token) => set({ user, token }),
   clearAuth: () => set({ user: null, token: null }),
   setLoading: (val) => set({ isLoading: val }),
+  updateUser: (updates) => set((state) => ({
+    user: state.user ? { ...state.user, ...updates } : null,
+  })),
 }));

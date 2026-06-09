@@ -9,9 +9,9 @@ let mapboxgl: any = null;
 interface TreeMarker {
   id: string;
   name: string;
-  lat: number;
-  lng: number;
-  status: string;
+  latitude: number;
+  longitude: number;
+  hydrationStatus: string;
 }
 
 interface MapboxMapProps {
@@ -24,6 +24,8 @@ interface MapboxMapProps {
   isAddingTree?: boolean;
   pendingPin?: { lat: number; lng: number } | null;
   onMapClick?: (coords: { lat: number; lng: number }) => void;
+  maxBounds?: { ne: [number, number]; sw: [number, number] };
+  followUserLocation?: boolean;
 }
 
 const statusColors: Record<string, string> = {
@@ -41,6 +43,8 @@ export default function MapboxMap({
   isAddingTree = false,
   pendingPin = null,
   onMapClick,
+  maxBounds,
+  followUserLocation,
 }: MapboxMapProps) {
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
@@ -63,14 +67,17 @@ export default function MapboxMap({
   useEffect(() => {
     // Dynamically load mapbox-gl and its CSS
     const loadMapbox = async () => {
-      if (!mapboxgl) {
-        mapboxgl = (await import('mapbox-gl')).default;
-
-        // Inject CSS into the page head
+      // Inject CSS first (before JS import) so the browser loads it in parallel
+      if (!document.querySelector('[data-mapboxgl-css]')) {
         const cssLink = document.createElement('link');
         cssLink.rel = 'stylesheet';
         cssLink.href = 'https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.css';
+        cssLink.setAttribute('data-mapboxgl-css', '');
         document.head.appendChild(cssLink);
+      }
+
+      if (!mapboxgl) {
+        mapboxgl = (await import('mapbox-gl')).default;
       }
 
       mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
@@ -82,6 +89,7 @@ export default function MapboxMap({
           center: initialCenter,
           zoom: initialZoom,
           pitch: 30,
+          maxBounds: maxBounds ? [maxBounds.sw, maxBounds.ne] : undefined,
         });
 
         map.addControl(new mapboxgl.NavigationControl(), 'top-right');
@@ -155,7 +163,7 @@ export default function MapboxMap({
               width: 36px;
               height: 36px;
               border-radius: 50%;
-              background: ${statusColors[tree.status] || '#999'};
+              background: ${statusColors[tree.hydrationStatus] || '#999'};
               border: 3px solid white;
               display: flex;
               align-items: center;
@@ -188,14 +196,14 @@ export default function MapboxMap({
           ev.stopPropagation();
           onMarkerPress(tree);
           map.flyTo({
-            center: [tree.lng, tree.lat],
+            center: [tree.longitude, tree.latitude],
             zoom: 17,
             duration: 600,
           });
         });
 
         const marker = new mapboxgl.Marker({ element: el })
-          .setLngLat([tree.lng, tree.lat])
+          .setLngLat([tree.longitude, tree.latitude])
           .addTo(map);
 
         markersRef.current.push(marker);

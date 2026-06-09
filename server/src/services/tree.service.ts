@@ -1,18 +1,17 @@
-// Tree service — CRUD + dynamic status computation
 import { prisma } from '../config/database';
-import { Health } from '@prisma/client';
+import { Health, TreeStatus } from '@prisma/client';
 import { NotFoundError } from '../utils/errors';
 
-type TreeStatus = 'watered' | 'needs_water' | 'due_soon';
-type HealthLabel = 'Sağlıklı' | 'Hasta' | 'Kritik';
+export type ComputedTreeStatus = 'watered' | 'needs_water' | 'due_soon';
+type HealthLabel = 'Healthy' | 'Sick' | 'Critical';
 
 const HEALTH_MAP: Record<Health, HealthLabel> = {
-  HEALTHY: 'Sağlıklı',
-  SICK: 'Hasta',
-  CRITICAL: 'Kritik',
+  HEALTHY: 'Healthy',
+  SICK: 'Sick',
+  CRITICAL: 'Critical',
 };
 
-function computeStatus(lastWateredAt: Date | null, wateringPeriodDays: number): TreeStatus {
+function computeWateringStatus(lastWateredAt: Date | null, wateringPeriodDays: number): ComputedTreeStatus {
   if (!lastWateredAt) return 'needs_water';
 
   const daysSince = (Date.now() - lastWateredAt.getTime()) / 86_400_000;
@@ -24,13 +23,13 @@ function computeStatus(lastWateredAt: Date | null, wateringPeriodDays: number): 
 
 function buildPhotoUrl(photoPath: string | null): string | undefined {
   if (!photoPath) return undefined;
-  return photoPath; // Frontend prepends the server base URL
+  return photoPath; // Frontend will just use this URL directly since it's now a full Supabase URL
 }
 
 export const treeService = {
-  async getAll(statusFilter?: TreeStatus, isApproved: boolean = true) {
+  async getAll(statusFilter: TreeStatus = 'ACTIVE') {
     const trees = await prisma.tree.findMany({
-      where: { isApproved },
+      where: { status: statusFilter },
       include: {
         wateringEvents: {
           orderBy: { createdAt: 'desc' },
@@ -42,9 +41,9 @@ export const treeService = {
       orderBy: { createdAt: 'desc' },
     });
 
-    const result = trees.map((tree) => {
+    return trees.map((tree) => {
       const lastWatered = tree.wateringEvents[0]?.createdAt ?? null;
-      const status = computeStatus(lastWatered, tree.wateringPeriodDays);
+      const computedStatus = computeWateringStatus(lastWatered, tree.wateringPeriodDays);
 
       return {
         id: tree.id,
@@ -52,7 +51,8 @@ export const treeService = {
         species: tree.species,
         latitude: tree.latitude,
         longitude: tree.longitude,
-        status,
+        status: computedStatus,
+        approvalStatus: tree.status,
         photoUrl: buildPhotoUrl(tree.photoPath),
         estimatedAge: tree.estimatedAge,
         height: tree.height,
@@ -66,13 +66,81 @@ export const treeService = {
         maxVolunteers: tree.maxVolunteers,
       };
     });
+  },
 
-    // Apply status filter if provided
-    if (statusFilter) {
-      return result.filter((t) => t.status === statusFilter);
-    }
+  async getMyTrees(userId: string) {
+    // Adopted trees
+    const adoptions = await prisma.adoption.findMany({
+      where: { userId },
+      include: {
+        tree: {
+          include: {
+            wateringEvents: { orderBy: { createdAt: 'desc' }, take: 1, select: { createdAt: true } },
+            _count: { select: { adoptions: true } },
+          }
+        }
+      }
+    });
 
-    return result;
+    const adoptedTrees = adoptions.map(a => {
+      const tree = a.tree;
+      const lastWatered = tree.wateringEvents[0]?.createdAt ?? null;
+      return {
+        id: tree.id,
+        name: tree.name,
+        species: tree.species,
+        latitude: tree.latitude,
+        longitude: tree.longitude,
+        status: computeWateringStatus(lastWatered, tree.wateringPeriodDays),
+        approvalStatus: tree.status,
+        photoUrl: buildPhotoUrl(tree.photoPath),
+        location: tree.location,
+        isAdopted: true,
+        isSuggested: false,
+      };
+    });
+
+    // Suggested trees that are not dismissed
+    const suggestions = await prisma.treeSuggestion.findMany({
+      where: { userId, dismissed: false },
+      include: {
+        tree: {
+          include: {
+            wateringEvents: { orderBy: { createdAt: 'desc' }, take: 1, select: { createdAt: true } },
+            _count: { select: { adoptions: true } },
+          }
+        }
+      }
+    });
+
+    const suggestedTrees = suggestions.map(s => {
+      const tree = s.tree;
+      const lastWatered = tree.wateringEvents[0]?.createdAt ?? null;
+      return {
+        id: tree.id,
+        name: tree.name,
+        species: tree.species,
+        latitude: tree.latitude,
+        longitude: tree.longitude,
+        status: computeWateringStatus(lastWatered, tree.wateringPeriodDays),
+        approvalStatus: tree.status,
+        photoUrl: buildPhotoUrl(tree.photoPath),
+        location: tree.location,
+        isAdopted: false,
+        isSuggested: true,
+        suggestionId: s.id,
+      };
+    });
+
+    // We don't want to list a tree twice if they adopted their own suggestion and it's active.
+    // Actually, if it's active, it might still show up in suggestions unless we filter.
+    // Let's filter out active trees from suggestions since they are either already in adopted or just public now.
+    const pendingOrDeniedSuggestions = suggestedTrees.filter(t => t.approvalStatus === 'PENDING' || t.approvalStatus === 'DENIED');
+
+    return {
+      adopted: adoptedTrees,
+      suggested: pendingOrDeniedSuggestions,
+    };
   },
 
   async getById(id: string) {
@@ -96,11 +164,11 @@ export const treeService = {
     });
 
     if (!tree) {
-      throw new NotFoundError('Ağaç bulunamadı');
+      throw new NotFoundError('Tree not found');
     }
 
     const lastEvent = tree.wateringEvents[0] ?? null;
-    const status = computeStatus(lastEvent?.createdAt ?? null, tree.wateringPeriodDays);
+    const computedStatus = computeWateringStatus(lastEvent?.createdAt ?? null, tree.wateringPeriodDays);
 
     return {
       id: tree.id,
@@ -108,7 +176,8 @@ export const treeService = {
       species: tree.species,
       latitude: tree.latitude,
       longitude: tree.longitude,
-      status,
+      status: computedStatus,
+      approvalStatus: tree.status,
       photoUrl: buildPhotoUrl(tree.photoPath),
       estimatedAge: tree.estimatedAge,
       height: tree.height,
@@ -150,16 +219,16 @@ export const treeService = {
     health?: string;
     maxVolunteers?: number;
   }) {
-    const healthEnum = data.health === 'Hasta'
+    const healthEnum = data.health === 'Sick' || data.health === 'Hasta'
       ? Health.SICK
-      : data.health === 'Kritik'
+      : data.health === 'Critical' || data.health === 'Kritik'
         ? Health.CRITICAL
         : Health.HEALTHY;
 
     const tree = await prisma.tree.create({
       data: {
         name: data.name,
-        species: data.species,
+        species: data.species || 'Bilinmiyor',
         latitude: data.latitude,
         longitude: data.longitude,
         location: data.location,
@@ -171,7 +240,7 @@ export const treeService = {
         isNaturalMonument: data.isNaturalMonument || false,
         health: healthEnum,
         maxVolunteers: data.maxVolunteers || 4,
-        isApproved: true,
+        status: 'ACTIVE',
       },
     });
 
@@ -180,20 +249,28 @@ export const treeService = {
 
   async suggest(data: {
     name: string;
-    species: string;
+    species?: string;
     latitude: number;
     longitude: number;
     location: string;
-  }) {
+  }, userId: string) {
     const tree = await prisma.tree.create({
       data: {
         name: data.name,
-        species: data.species,
+        species: data.species || 'Bilinmiyor',
         latitude: data.latitude,
         longitude: data.longitude,
         location: data.location,
-        isApproved: false,
+        status: 'PENDING',
+        suggestion: {
+          create: {
+            userId: userId
+          }
+        }
       },
+      include: {
+        suggestion: true
+      }
     });
 
     return tree;
@@ -202,9 +279,34 @@ export const treeService = {
   async approve(id: string) {
     await prisma.tree.update({
       where: { id },
-      data: { isApproved: true },
+      data: { status: 'ACTIVE' },
     });
     return this.getById(id);
+  },
+
+  async deny(id: string) {
+    await prisma.tree.update({
+      where: { id },
+      data: { status: 'DENIED' },
+    });
+    return { message: 'Tree suggestion denied' };
+  },
+
+  async dismissSuggestion(treeId: string, userId: string) {
+    const suggestion = await prisma.treeSuggestion.findUnique({
+      where: { treeId }
+    });
+    
+    if (!suggestion || suggestion.userId !== userId) {
+      throw new NotFoundError('Suggestion not found or unauthorized');
+    }
+
+    await prisma.treeSuggestion.update({
+      where: { treeId },
+      data: { dismissed: true }
+    });
+
+    return { message: 'Suggestion dismissed' };
   },
 
   async update(id: string, data: Partial<{
@@ -222,22 +324,19 @@ export const treeService = {
     health: string;
     maxVolunteers: number;
   }>) {
-    // Verify tree exists
     const existing = await prisma.tree.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundError('Ağaç bulunamadı');
+    if (!existing) throw new NotFoundError('Tree not found');
 
     const updateData: any = { ...data };
 
-    // Convert health string to enum if provided
     if (data.health) {
-      updateData.health = data.health === 'Hasta'
+      updateData.health = data.health === 'Sick' || data.health === 'Hasta'
         ? Health.SICK
-        : data.health === 'Kritik'
+        : data.health === 'Critical' || data.health === 'Kritik'
           ? Health.CRITICAL
           : Health.HEALTHY;
     }
 
-    // Convert planting date
     if (data.plantingDate) {
       updateData.plantingDate = new Date(data.plantingDate);
     }
@@ -248,9 +347,12 @@ export const treeService = {
 
   async delete(id: string) {
     const existing = await prisma.tree.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundError('Ağaç bulunamadı');
+    if (!existing) throw new NotFoundError('Tree not found');
 
-    await prisma.tree.delete({ where: { id } });
-    return { message: 'Ağaç silindi' };
+    await prisma.tree.update({ 
+      where: { id },
+      data: { status: 'REMOVED' }
+    });
+    return { message: 'Tree removed' };
   },
 };

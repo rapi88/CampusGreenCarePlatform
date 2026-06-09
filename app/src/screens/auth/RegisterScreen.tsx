@@ -26,10 +26,10 @@ export default function RegisterScreen({ navigation }: Props) {
 
   const validate = () => {
     const e: Record<string, string> = {};
-    if (!name.trim()) e.name = 'Ad soyad gereklidir';
-    if (!isGTUEmail(email)) e.email = 'Geçerli bir GTU e-postası girin (@gtu.edu.tr)';
-    if (!isStrongPassword(password)) e.password = 'En az 8 karakter, bir büyük harf ve rakam içermeli';
-    if (password !== confirm) e.confirm = 'Şifreler eşleşmiyor';
+    if (!name.trim()) e.name = 'Full name is required';
+    if (!isGTUEmail(email)) e.email = 'Enter a valid GTU email (@gtu.edu.tr)';
+    if (!isStrongPassword(password)) e.password = 'Must be at least 8 characters, include a number and an uppercase letter';
+    if (password !== confirm) e.confirm = 'Passwords do not match';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -41,7 +41,7 @@ export default function RegisterScreen({ navigation }: Props) {
       await authApi.register({ name, email, password });
       setDone(true);
     } catch (err: any) {
-      Alert.alert('Hata', err.response?.data?.message ?? 'Kayıt oluşturulamadı.');
+      Alert.alert('Error', err.response?.data?.message ?? 'Registration failed.');
     } finally {
       setLoading(false);
     }
@@ -51,12 +51,12 @@ export default function RegisterScreen({ navigation }: Props) {
     return (
       <View style={[styles.container, styles.center]}>
         <Text style={styles.checkEmoji}>✉️</Text>
-        <Text style={styles.doneTitle}>E-postanı kontrol et!</Text>
+        <Text style={styles.doneTitle}>Check your email!</Text>
         <Text style={styles.doneText}>
-          GTU mail adresinize doğrulama bağlantısı gönderdik. Doğruladıktan sonra giriş yapabilirsiniz.
+          We sent a verification link to your GTU email address. You can log in after verifying.
         </Text>
         <TouchableOpacity style={styles.btn} onPress={() => navigation.navigate('Login')}>
-          <Text style={styles.btnText}>Giriş Yap</Text>
+          <Text style={styles.btnText}>Login</Text>
         </TouchableOpacity>
       </View>
     );
@@ -65,14 +65,14 @@ export default function RegisterScreen({ navigation }: Props) {
   return (
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
-        <Text style={styles.backText}>← Geri</Text>
+        <Text style={styles.backText}>← Back</Text>
       </TouchableOpacity>
-      <Text style={styles.title}>Hesap Oluştur</Text>
-      <Text style={styles.subtitle}>GTU öğrenci hesabınızla kayıt olun</Text>
+      <Text style={styles.title}>Create Account</Text>
+      <Text style={styles.subtitle}>Register with your GTU student account</Text>
 
-      <FormInput label="Ad Soyad" placeholder="Adınız Soyadınız" value={name} onChangeText={setName} error={errors.name} />
-      <FormInput label="GTU E-posta" placeholder="ad.soyad@gtu.edu.tr" keyboardType="email-address" value={email} onChangeText={setEmail} error={errors.email} />
-      <FormInput label="Şifre" placeholder="Güçlü bir şifre seçin" isPassword value={password} onChangeText={setPassword} error={errors.password} />
+      <FormInput label="Full Name" placeholder="Your Full Name" value={name} onChangeText={setName} error={errors.name} />
+      <FormInput label="GTU Email" placeholder="name.surname@gtu.edu.tr" keyboardType="email-address" value={email} onChangeText={setEmail} error={errors.email} />
+      <FormInput label="Password" placeholder="Choose a strong password" isPassword value={password} onChangeText={setPassword} error={errors.password} />
 
       {/* Password strength bar */}
       {password.length > 0 && (
@@ -86,20 +86,20 @@ export default function RegisterScreen({ navigation }: Props) {
               ]}
             />
           ))}
-          <Text style={[styles.strengthLabel, { color: strengthColor }]}>{strength === 'weak' ? 'Zayıf' : strength === 'fair' ? 'Orta' : 'Güçlü'}</Text>
+          <Text style={[styles.strengthLabel, { color: strengthColor }]}>{strength === 'weak' ? 'Weak' : strength === 'fair' ? 'Fair' : 'Strong'}</Text>
         </View>
       )}
 
-      <FormInput label="Şifre Tekrar" placeholder="Şifreyi tekrar girin" isPassword value={confirm} onChangeText={setConfirm} error={errors.confirm} />
+      <FormInput label="Confirm Password" placeholder="Re-enter your password" isPassword value={confirm} onChangeText={setConfirm} error={errors.confirm} />
 
       <TouchableOpacity style={[styles.btn, loading && styles.btnDisabled]} onPress={handleRegister} disabled={loading}>
-        {loading ? <ActivityIndicator color={Colors.white} /> : <Text style={styles.btnText}>Kayıt Ol</Text>}
+        {loading ? <ActivityIndicator color={Colors.white} /> : <Text style={styles.btnText}>Register</Text>}
       </TouchableOpacity>
 
       <View style={styles.loginRow}>
-        <Text style={styles.muted}>Zaten hesabın var mı? </Text>
+        <Text style={styles.muted}>Already have an account? </Text>
         <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-          <Text style={styles.link}>Giriş Yap</Text>
+          <Text style={styles.link}>Login</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>

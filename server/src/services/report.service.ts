@@ -6,7 +6,7 @@ export const reportService = {
    * Dashboard stats for admin panel.
    */
   async getDashboardStats() {
-    const [totalTrees, activeVolunteers, wateringsToday, openIssues] = await Promise.all([
+    const [totalTrees, activeVolunteers, wateringsToday] = await Promise.all([
       prisma.tree.count(),
       prisma.user.count({ where: { role: 'USER', adoptions: { some: {} } } }),
       prisma.wateringEvent.count({
@@ -16,14 +16,12 @@ export const reportService = {
           },
         },
       }),
-      prisma.issueReport.count({ where: { resolved: false } }),
     ]);
 
     return {
       totalTrees,
       activeVolunteers,
       wateringsToday,
-      openIssues,
     };
   },
 
@@ -116,53 +114,5 @@ export const reportService = {
         pointsAwarded: e.pointsAwarded,
       })),
     };
-  },
-
-  /**
-   * Leaderboard data.
-   */
-  async getLeaderboard(type: 'most_watering' | 'most_consistent' = 'most_watering') {
-    if (type === 'most_watering') {
-      return prisma.user.findMany({
-        where: { role: 'USER' },
-        select: {
-          id: true,
-          name: true,
-          avatarUrl: true,
-          points: true,
-          _count: { select: { wateringEvents: true } },
-        },
-        orderBy: { points: 'desc' },
-        take: 50,
-      });
-    }
-
-    // Most consistent — users who water most regularly
-    const users = await prisma.user.findMany({
-      where: { role: 'USER', wateringEvents: { some: {} } },
-      select: {
-        id: true,
-        name: true,
-        avatarUrl: true,
-        points: true,
-        wateringEvents: {
-          select: { createdAt: true },
-          orderBy: { createdAt: 'desc' },
-        },
-      },
-    });
-
-    // Calculate consistency score: waterings in the last 30 days
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 86_400_000);
-    return users
-      .map((u) => ({
-        id: u.id,
-        name: u.name,
-        avatarUrl: u.avatarUrl,
-        points: u.points,
-        recentWaterings: u.wateringEvents.filter((e) => e.createdAt >= thirtyDaysAgo).length,
-      }))
-      .sort((a, b) => b.recentWaterings - a.recentWaterings)
-      .slice(0, 50);
-  },
+  }
 };

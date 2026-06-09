@@ -1,35 +1,53 @@
 // Profile screen
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Image } from 'react-native';
+import ScaleButton from '../../components/common/ScaleButton';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useQuery } from '@tanstack/react-query';
 import { Colors } from '../../theme/colors';
 import { Spacing, Radius, Shadow } from '../../theme/spacing';
 import { useAuthStore } from '../../store/auth.store';
+import { treesApi } from '../../api/trees.api';
 
 const MENU_ITEMS = [
-  { icon: '✏️', label: 'Profili Düzenle', screen: 'EditProfile' },
-  { icon: '🔔', label: 'Bildirim Ayarları', screen: 'NotificationSettings' },
-  { icon: '🏆', label: 'Liderlik Tablosu', screen: 'Leaderboard' },
+  { icon: '✏️', label: 'Edit Profile', screen: 'EditProfile' },
+  { icon: '🔔', label: 'Notification Settings', screen: 'NotificationSettings' },
+  { icon: '🏆', label: 'Leaderboard', screen: 'Leaderboard' },
 ];
 
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();
   const { user, clearAuth } = useAuthStore();
 
-  const handleLogout = () => {
-    Alert.alert('Çıkış Yap', 'Çıkış yapmak istediğinize emin misiniz?', [
-      { text: 'İptal', style: 'cancel' },
-      {
-        text: 'Çıkış Yap', style: 'destructive',
-        onPress: async () => { await AsyncStorage.removeItem('token'); clearAuth(); }
-      },
-    ]);
+  const { data: myTreesResponse } = useQuery({
+    queryKey: ['my-trees'],
+    queryFn: () => treesApi.getMyTrees(),
+  });
+
+  const adoptedTreesCount = myTreesResponse?.data?.adopted?.length || 0;
+
+  const handleLogout = async () => {
+    if (Platform.OS === 'web') {
+      const confirm = window.confirm('Are you sure you want to log out?');
+      if (confirm) {
+        await AsyncStorage.removeItem('token');
+        clearAuth();
+      }
+    } else {
+      Alert.alert('Logout', 'Are you sure you want to log out?', [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout', style: 'destructive',
+          onPress: async () => { await AsyncStorage.removeItem('token'); clearAuth(); }
+        },
+      ]);
+    }
   };
 
-  const displayName = user?.name ?? 'Kullanıcı';
-  const displayEmail = user?.email ?? 'kullanici@gtu.edu.tr';
+  const displayName = user?.name ?? 'User';
+  const displayEmail = user?.email ?? 'user@gtu.edu.tr';
   const initial = displayName.charAt(0).toUpperCase();
 
   return (
@@ -37,7 +55,18 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         {/* Avatar & name */}
         <View style={styles.avatarSection}>
-          <View style={styles.avatarCircle}><Text style={styles.avatarInitial}>{initial}</Text></View>
+          <TouchableOpacity onPress={() => navigation.navigate('EditProfile')} style={styles.avatarWrapper}>
+            {user?.avatarUrl ? (
+              <Image source={{ uri: user.avatarUrl }} style={styles.avatarImage} />
+            ) : (
+              <View style={styles.avatarCircle}>
+                <Text style={styles.avatarInitial}>{initial}</Text>
+              </View>
+            )}
+            <View style={styles.editBadge}>
+              <Text style={styles.editBadgeText}>✏️</Text>
+            </View>
+          </TouchableOpacity>
           <Text style={styles.name}>{displayName}</Text>
           <Text style={styles.email}>{displayEmail}</Text>
         </View>
@@ -45,25 +74,25 @@ export default function ProfileScreen() {
         {/* Stats */}
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{user?.adoptedTreeIds?.length ?? 2}</Text>
-            <Text style={styles.statLabel}>Ağaç Sahiplendi</Text>
+            <Text style={styles.statValue}>{adoptedTreesCount}</Text>
+            <Text style={styles.statLabel}>Adopted Trees</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>14</Text>
-            <Text style={styles.statLabel}>Sulama Yapıldı</Text>
+            <Text style={styles.statValue}>{user?.totalWaterings ?? 0}</Text>
+            <Text style={styles.statLabel}>Waterings Done</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{user?.points ?? 140} 🏆</Text>
-            <Text style={styles.statLabel}>Puan</Text>
+            <Text style={styles.statValue}>{user?.points ?? 0} 🏆</Text>
+            <Text style={styles.statLabel}>Points</Text>
           </View>
         </View>
 
         {/* Menu */}
         <View style={styles.menuSection}>
           {MENU_ITEMS.map((item) => (
-            <TouchableOpacity
+            <ScaleButton
               key={item.screen}
               style={styles.menuItem}
               onPress={() => navigation.navigate(item.screen)}
@@ -71,14 +100,14 @@ export default function ProfileScreen() {
               <Text style={styles.menuIcon}>{item.icon}</Text>
               <Text style={styles.menuLabel}>{item.label}</Text>
               <Text style={styles.menuArrow}>›</Text>
-            </TouchableOpacity>
+            </ScaleButton>
           ))}
         </View>
 
         {/* Logout */}
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-          <Text style={styles.logoutText}>🚪 Çıkış Yap</Text>
-        </TouchableOpacity>
+        <ScaleButton style={styles.logoutBtn} onPress={handleLogout}>
+          <Text style={styles.logoutText}>🚪 Logout</Text>
+        </ScaleButton>
       </ScrollView>
     </SafeAreaView>
   );
@@ -88,11 +117,20 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.neutralBg },
   content: { padding: Spacing.md },
   avatarSection: { alignItems: 'center', paddingVertical: Spacing.xl },
+  avatarWrapper: { position: 'relative', marginBottom: 12 },
+  avatarImage: { width: 88, height: 88, borderRadius: 44 },
   avatarCircle: {
     width: 88, height: 88, borderRadius: 44, backgroundColor: Colors.greenPrimary,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 12,
+    alignItems: 'center', justifyContent: 'center',
   },
   avatarInitial: { fontSize: 36, fontWeight: '700', color: Colors.white },
+  editBadge: {
+    position: 'absolute', bottom: 0, right: 0,
+    width: 26, height: 26, borderRadius: 13,
+    backgroundColor: Colors.white, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5, borderColor: Colors.neutralLight,
+  },
+  editBadgeText: { fontSize: 12 },
   name: { fontSize: 22, fontWeight: '700', color: Colors.neutralDark },
   email: { fontSize: 13, color: Colors.neutralMid, marginTop: 4 },
   statsRow: {

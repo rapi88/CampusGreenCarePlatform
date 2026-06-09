@@ -35,6 +35,14 @@ export const config = {
     maxFileSize: 10 * 1024 * 1024, // 10 MB
   },
 
+  supabase: {
+    url: process.env.SUPABASE_URL || '',
+    serviceKey: process.env.SUPABASE_SERVICE_KEY || '',
+  },
+
   // GPS proximity threshold for watering validation (meters)
   wateringProximityThreshold: 50, // Generous for GPS inaccuracy
+
+  // Enable notification test endpoints in the admin panel
+  notificationDebug: process.env.NOTIFICATION_DEBUG === 'true',
 };
