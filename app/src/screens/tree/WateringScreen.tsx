@@ -1,6 +1,7 @@
 // GPS-verified watering screen
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Animated, ActivityIndicator } from 'react-native';
+import ScaleButton from '../../components/common/ScaleButton';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as Location from 'expo-location';
@@ -37,7 +38,9 @@ export default function WateringScreen({ route, navigation }: Props) {
     queryFn: () => treesApi.getById(treeId),
   });
   
-  const treeCoords = treeResponse?.data ? { lat: treeResponse.data.latitude, lng: treeResponse.data.longitude } : null;
+  const treeCoords = useMemo(() => {
+    return treeResponse?.data ? { lat: treeResponse.data.latitude, lng: treeResponse.data.longitude } : null;
+  }, [treeResponse?.data?.latitude, treeResponse?.data?.longitude]);
 
   const waterMutation = useMutation({
     mutationFn: (coords: { lat: number; lng: number }) => treesApi.water(treeId, coords),
@@ -109,7 +112,7 @@ export default function WateringScreen({ route, navigation }: Props) {
               )}
             </View>
 
-            <TouchableOpacity
+            <ScaleButton
               style={[styles.waterBtn, phase === 'far' && styles.waterBtnDisabled]}
               disabled={phase === 'far' || waterMutation.isPending}
               onPress={handleWater}
@@ -118,7 +121,7 @@ export default function WateringScreen({ route, navigation }: Props) {
                 ? <ActivityIndicator color={Colors.white} />
                 : <Text style={styles.waterBtnText}>🚿 Confirm Watering</Text>
               }
-            </TouchableOpacity>
+            </ScaleButton>
 
             <TouchableOpacity style={styles.retryBtn} onPress={checkLocation}>
               <Text style={styles.retryText}>↻ Refresh Location</Text>

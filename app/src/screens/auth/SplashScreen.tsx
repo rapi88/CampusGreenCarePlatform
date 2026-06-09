@@ -1,13 +1,40 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { Colors } from '../../theme/colors';
 import { useAuthStore } from '../../store/auth.store';
 import { authApi } from '../../api/auth.api';
 import { AuthStackParamList } from '../../navigation/AuthStack';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Splash'>;
+
+async function registerPushToken() {
+  try {
+    if (Platform.OS === 'web') return;
+    const { status } = await Notifications.requestPermissionsAsync();
+    if (status !== 'granted') {
+      console.log('[Push] Permission denied');
+      return;
+    }
+    // Resolve projectId from EAS config, then app.config extra, then fallback
+    const projectId: string | undefined =
+      Constants.easConfig?.projectId ??
+      (Constants.expoConfig?.extra as any)?.eas?.projectId;
+
+    if (!projectId) {
+      console.log('[Push] No projectId configured — skipping Expo push token. Run: npx eas init');
+      return;
+    }
+    const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
+    await authApi.registerPushToken(tokenData.data);
+    console.log('[Push] Token registered:', tokenData.data);
+  } catch (e) {
+    console.log('[Push] Token registration skipped:', e);
+  }
+}
 
 export default function SplashScreen({ navigation }: Props) {
   const scale = new Animated.Value(0.6);
@@ -29,7 +56,7 @@ export default function SplashScreen({ navigation }: Props) {
         if (token) {
           const res = await authApi.me();
           setAuth(res.data, token);
-          // RootNavigator handles redirect automatically
+          registerPushToken(); // fire-and-forget, never blocks app start
         } else {
           navigation.replace('Login');
         }

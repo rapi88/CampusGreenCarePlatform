@@ -9,12 +9,11 @@ import { Spacing, Radius, Shadow } from '../../theme/spacing';
 const SETTINGS = [
   { id: 'watering', label: 'Watering Reminders', desc: 'Get notified when it is time to water' },
   { id: 'chat', label: 'Chat Messages', desc: 'Receive new chat message notifications' },
-  { id: 'issues', label: 'Issue Reports', desc: 'Get notified when a tree issue is reported' },
 ];
 
 export default function NotificationSettingsScreen() {
   const navigation = useNavigation<any>();
-  const [enabled, setEnabled] = useState<Record<string, boolean>>({ watering: true, chat: true, issues: false });
+  const [enabled, setEnabled] = useState<Record<string, boolean>>({ watering: true, chat: true });
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>

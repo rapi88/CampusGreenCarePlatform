@@ -20,6 +20,7 @@ export const authApi = {
   register: (data: RegisterPayload) => api.post('/auth/register', data),
   forgotPassword: (email: string) => api.post('/auth/forgot-password', { email }),
   me: () => api.get<User>('/auth/me'),
+  registerPushToken: (expoPushToken: string) => api.post<{ message: string }>('/auth/push-token', { expoPushToken }),
   uploadAvatar: (formData: FormData) => api.put<{ message: string; avatarUrl: string }>('/auth/avatar', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),

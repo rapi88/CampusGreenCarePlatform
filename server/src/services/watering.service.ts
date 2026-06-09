@@ -49,14 +49,4 @@ export const wateringService = {
     };
   },
 
-  async reportIssue(userId: string, treeId: string, description: string) {
-    const tree = await prisma.tree.findUnique({ where: { id: treeId } });
-    if (!tree) throw new NotFoundError('Tree not found');
-
-    const report = await prisma.issueReport.create({
-      data: { userId, treeId, description },
-    });
-
-    return { message: 'Issue reported', reportId: report.id };
-  },
 };

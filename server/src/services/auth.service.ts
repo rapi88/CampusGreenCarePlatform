@@ -92,7 +92,7 @@ export const authService = {
     });
 
     if (!user) {
-      throw new UnauthorizedError('Invalid email or password');
+      throw new UnauthorizedError('This account does not exist. Please register first.');
     }
 
     if (!user.isVerified) {
@@ -101,7 +101,7 @@ export const authService = {
 
     const isValid = await bcrypt.compare(password, user.passwordHash);
     if (!isValid) {
-      throw new UnauthorizedError('Invalid email or password');
+      throw new UnauthorizedError('Password incorrect');
     }
 
     const token = generateToken(user.id, user.role);

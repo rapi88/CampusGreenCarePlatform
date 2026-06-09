@@ -24,6 +24,7 @@ export interface Tree {
   isAdopted?: boolean;
   isSuggested?: boolean;
   suggestionId?: string;
+  volunteers?: { id: string; name: string; avatarUrl: string | null }[];
 }
 
 export interface MyTreesResponse {
@@ -41,6 +42,4 @@ export const treesApi = {
   leaveAdoption: (id: string) => api.delete(`/trees/${id}/adopt`),
   water: (id: string, coords: { lat: number; lng: number }) =>
     api.post(`/trees/${id}/water`, { latitude: coords.lat, longitude: coords.lng }),
-  reportIssue: (id: string, description: string) =>
-    api.post(`/trees/${id}/report`, { description }),
 };

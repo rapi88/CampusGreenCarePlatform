@@ -1,6 +1,7 @@
 // Profile screen
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Image } from 'react-native';
+import ScaleButton from '../../components/common/ScaleButton';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -54,7 +55,18 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         {/* Avatar & name */}
         <View style={styles.avatarSection}>
-          <View style={styles.avatarCircle}><Text style={styles.avatarInitial}>{initial}</Text></View>
+          <TouchableOpacity onPress={() => navigation.navigate('EditProfile')} style={styles.avatarWrapper}>
+            {user?.avatarUrl ? (
+              <Image source={{ uri: user.avatarUrl }} style={styles.avatarImage} />
+            ) : (
+              <View style={styles.avatarCircle}>
+                <Text style={styles.avatarInitial}>{initial}</Text>
+              </View>
+            )}
+            <View style={styles.editBadge}>
+              <Text style={styles.editBadgeText}>✏️</Text>
+            </View>
+          </TouchableOpacity>
           <Text style={styles.name}>{displayName}</Text>
           <Text style={styles.email}>{displayEmail}</Text>
         </View>
@@ -67,7 +79,7 @@ export default function ProfileScreen() {
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>14</Text>
+            <Text style={styles.statValue}>{user?.totalWaterings ?? 0}</Text>
             <Text style={styles.statLabel}>Waterings Done</Text>
           </View>
           <View style={styles.statDivider} />
@@ -80,7 +92,7 @@ export default function ProfileScreen() {
         {/* Menu */}
         <View style={styles.menuSection}>
           {MENU_ITEMS.map((item) => (
-            <TouchableOpacity
+            <ScaleButton
               key={item.screen}
               style={styles.menuItem}
               onPress={() => navigation.navigate(item.screen)}
@@ -88,14 +100,14 @@ export default function ProfileScreen() {
               <Text style={styles.menuIcon}>{item.icon}</Text>
               <Text style={styles.menuLabel}>{item.label}</Text>
               <Text style={styles.menuArrow}>›</Text>
-            </TouchableOpacity>
+            </ScaleButton>
           ))}
         </View>
 
         {/* Logout */}
-        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+        <ScaleButton style={styles.logoutBtn} onPress={handleLogout}>
           <Text style={styles.logoutText}>🚪 Logout</Text>
-        </TouchableOpacity>
+        </ScaleButton>
       </ScrollView>
     </SafeAreaView>
   );
@@ -105,11 +117,20 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.neutralBg },
   content: { padding: Spacing.md },
   avatarSection: { alignItems: 'center', paddingVertical: Spacing.xl },
+  avatarWrapper: { position: 'relative', marginBottom: 12 },
+  avatarImage: { width: 88, height: 88, borderRadius: 44 },
   avatarCircle: {
     width: 88, height: 88, borderRadius: 44, backgroundColor: Colors.greenPrimary,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 12,
+    alignItems: 'center', justifyContent: 'center',
   },
   avatarInitial: { fontSize: 36, fontWeight: '700', color: Colors.white },
+  editBadge: {
+    position: 'absolute', bottom: 0, right: 0,
+    width: 26, height: 26, borderRadius: 13,
+    backgroundColor: Colors.white, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1.5, borderColor: Colors.neutralLight,
+  },
+  editBadgeText: { fontSize: 12 },
   name: { fontSize: 22, fontWeight: '700', color: Colors.neutralDark },
   email: { fontSize: 13, color: Colors.neutralMid, marginTop: 4 },
   statsRow: {

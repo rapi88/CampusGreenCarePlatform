@@ -6,7 +6,7 @@ export const reportService = {
    * Dashboard stats for admin panel.
    */
   async getDashboardStats() {
-    const [totalTrees, activeVolunteers, wateringsToday, openIssues] = await Promise.all([
+    const [totalTrees, activeVolunteers, wateringsToday] = await Promise.all([
       prisma.tree.count(),
       prisma.user.count({ where: { role: 'USER', adoptions: { some: {} } } }),
       prisma.wateringEvent.count({
@@ -16,14 +16,12 @@ export const reportService = {
           },
         },
       }),
-      prisma.issueReport.count({ where: { resolved: false } }),
     ]);
 
     return {
       totalTrees,
       activeVolunteers,
       wateringsToday,
-      openIssues,
     };
   },
 

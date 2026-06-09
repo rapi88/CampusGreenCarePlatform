@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert,
 } from 'react-native';
+import ScaleButton from '../../components/common/ScaleButton';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Colors } from '../../theme/colors';
@@ -78,7 +79,7 @@ export default function LoginScreen({ navigation }: Props) {
           <Text style={styles.link}>Forgot password?</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
+        <ScaleButton
           style={[styles.btn, loading && styles.btnDisabled]}
           onPress={handleLogin}
           disabled={loading}
@@ -88,7 +89,7 @@ export default function LoginScreen({ navigation }: Props) {
           ) : (
             <Text style={styles.btnText}>Login</Text>
           )}
-        </TouchableOpacity>
+        </ScaleButton>
 
         <View style={styles.registerRow}>
           <Text style={styles.muted}>Don't have an account? </Text>

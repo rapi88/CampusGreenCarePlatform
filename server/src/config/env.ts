@@ -42,4 +42,7 @@ export const config = {
 
   // GPS proximity threshold for watering validation (meters)
   wateringProximityThreshold: 50, // Generous for GPS inaccuracy
+
+  // Enable notification test endpoints in the admin panel
+  notificationDebug: process.env.NOTIFICATION_DEBUG === 'true',
 };

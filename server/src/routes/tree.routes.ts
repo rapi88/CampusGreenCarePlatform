@@ -18,6 +18,5 @@ router.put('/suggestions/:id/dismiss', auth, treeController.dismissSuggestion);
 router.post('/:id/adopt', auth, treeController.adopt);
 router.delete('/:id/adopt', auth, treeController.leaveAdoption);
 router.post('/:id/water', auth, treeController.water);
-router.post('/:id/report', auth, treeController.reportIssue);
 
 export default router;

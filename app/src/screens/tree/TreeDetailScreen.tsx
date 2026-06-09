@@ -1,29 +1,54 @@
 // Tree Detail Screen
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Linking, ActivityIndicator
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, ActivityIndicator
 } from 'react-native';
+import ScaleButton from '../../components/common/ScaleButton';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { useQuery } from '@tanstack/react-query';
+import { useFocusEffect } from '@react-navigation/native';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import Toast from 'react-native-toast-message';
 import { Colors } from '../../theme/colors';
 import { Spacing, Radius, Shadow } from '../../theme/spacing';
 import StatusChip from '../../components/common/StatusChip';
 import { formatDate, relativeTime } from '../../utils/formatters';
 import { TreeStackParamList } from '../../navigation/MainTabs';
 import { treesApi } from '../../api/trees.api';
+import { useAuthStore } from '../../store/auth.store';
 
 type Props = NativeStackScreenProps<TreeStackParamList, 'TreeDetail'>;
 
 export default function TreeDetailScreen({ route, navigation }: Props) {
   const { treeId } = route.params;
+  const queryClient = useQueryClient();
+  const { user } = useAuthStore();
 
-  const { data: treeResponse, isLoading, isError } = useQuery({
+  const { data: treeResponse, isLoading, isError, refetch } = useQuery({
     queryKey: ['tree', treeId],
     queryFn: () => treesApi.getById(treeId),
   });
 
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch])
+  );
+
+  const leaveAdoptionMutation = useMutation({
+    mutationFn: () => treesApi.leaveAdoption(treeId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tree', treeId] });
+      queryClient.invalidateQueries({ queryKey: ['trees'] });
+      Toast.show({ type: 'success', text1: 'Success', text2: 'You have unadopted this tree.' });
+    },
+    onError: () => {
+      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to unadopt the tree.' });
+    }
+  });
+
   const tree = treeResponse?.data;
+  const isAdoptedByMe = tree?.volunteers?.some(v => v.id === user?.id) || false;
 
   if (isLoading) {
     return (
@@ -52,9 +77,13 @@ export default function TreeDetailScreen({ route, navigation }: Props) {
           <Text style={styles.backIcon}>‹</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Tree #{tree.id.slice(-4)}</Text>
-        <TouchableOpacity style={styles.moreBtn}>
-          <Text style={styles.moreIcon}>⋯</Text>
-        </TouchableOpacity>
+        {user?.role === 'ADMIN' ? (
+          <TouchableOpacity style={styles.moreBtn} onPress={() => (navigation as any).navigate('AdminAddEditTree', { treeId })}>
+            <Text style={styles.editAdminText}>✏️ Edit</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.moreBtn} />
+        )}
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -113,20 +142,19 @@ export default function TreeDetailScreen({ route, navigation }: Props) {
               <Text style={styles.gridLabel}>Watering Period</Text>
               <Text style={styles.gridValue}>{tree.wateringPeriodDays} Days</Text>
             </View>
-            <View style={styles.gridCell}>
+            <TouchableOpacity style={styles.gridCell} onPress={() => navigation.navigate('Adoption', { treeId })}>
               <Text style={styles.gridLabel}>Volunteers</Text>
               <Text style={styles.gridValue}>{tree.volunteerCount}/{tree.maxVolunteers}</Text>
-            </View>
+            </TouchableOpacity>
           </View>
 
-          {/* Last caretaker -> Wait, we don't have lastCaretaker in the Tree response model currently, mock it or remove it */}
-          {/* We will just show volunteer info */}
+          {/* Adoption Info */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionIcon}>🤝</Text>
               <Text style={styles.sectionTitle}>Adoption Info</Text>
             </View>
-            <View style={styles.caretakerRow}>
+            <TouchableOpacity style={styles.caretakerRow} onPress={() => navigation.navigate('Adoption', { treeId })}>
               <View style={styles.avatarCircle}>
                 <Text style={styles.avatarInitial}>{'?'}</Text>
               </View>
@@ -135,57 +163,64 @@ export default function TreeDetailScreen({ route, navigation }: Props) {
                 <Text style={styles.caretakerBadge}>{tree.volunteerCount} users adopted</Text>
               </View>
               {tree.isAdopted ? (
-                <Text style={styles.profileLink}>Adopted</Text>
+                <Text style={styles.profileLink}>Adopted ›</Text>
               ) : (
-                <Text style={styles.profileLink}>Available</Text>
+                <Text style={styles.profileLink}>Available ›</Text>
               )}
-            </View>
+            </TouchableOpacity>
           </View>
 
           {/* Quick action buttons: Chat & Notes */}
           <View style={styles.quickActions}>
-            <TouchableOpacity
+            <ScaleButton
               style={styles.quickActionBtn}
               onPress={() => navigation.navigate('Chat', { treeId, treeName: tree.name })}
             >
               <Text style={styles.quickActionEmoji}>💬</Text>
               <Text style={styles.quickActionText}>Chat</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+            </ScaleButton>
+            <ScaleButton
               style={styles.quickActionBtn}
               onPress={() => navigation.navigate('Notes', { treeId, treeName: tree.name })}
             >
               <Text style={styles.quickActionEmoji}>📝</Text>
               <Text style={styles.quickActionText}>Notes</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.quickActionBtn}
-              onPress={() => navigation.navigate('Adoption', { treeId })}
-            >
-              <Text style={styles.quickActionEmoji}>🤝</Text>
-              <Text style={styles.quickActionText}>Adopt</Text>
-            </TouchableOpacity>
+            </ScaleButton>
+            {isAdoptedByMe ? (
+              <ScaleButton
+                style={styles.quickActionBtn}
+                onPress={() => leaveAdoptionMutation.mutate()}
+                disabled={leaveAdoptionMutation.isPending}
+              >
+                {leaveAdoptionMutation.isPending ? (
+                  <ActivityIndicator color={Colors.error} />
+                ) : (
+                  <>
+                    <Text style={styles.quickActionEmoji}>👋</Text>
+                    <Text style={[styles.quickActionText, { color: Colors.error }]}>Unadopt</Text>
+                  </>
+                )}
+              </ScaleButton>
+            ) : (
+              <ScaleButton
+                style={styles.quickActionBtn}
+                onPress={() => navigation.navigate('Adoption', { treeId })}
+              >
+                <Text style={styles.quickActionEmoji}>🤝</Text>
+                <Text style={styles.quickActionText}>Adopt</Text>
+              </ScaleButton>
+            )}
           </View>
 
           {/* Primary CTA */}
-          <TouchableOpacity
+          <ScaleButton
             style={styles.waterBtn}
             onPress={() => navigation.navigate('Watering', { treeId })}
           >
             <Text style={styles.waterBtnText}>🚿 Water Tree</Text>
-          </TouchableOpacity>
+          </ScaleButton>
 
-          {/* Secondary actions */}
-          <View style={styles.secondaryRow}>
-            <TouchableOpacity style={styles.secondaryBtn}>
-              <Text style={styles.secondaryText}>⚠️ Report Issue</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.secondaryBtn}
-              onPress={() => navigation.navigate('Notes', { treeId, treeName: tree.name })}
-            >
-              <Text style={styles.secondaryText}>📝 Add Note</Text>
-            </TouchableOpacity>
-          </View>
+
 
           {/* Eco info */}
           <View style={styles.ecoBox}>
@@ -213,8 +248,9 @@ const styles = StyleSheet.create({
   backBtnHeader: { padding: 8 },
   backIcon: { fontSize: 28, color: Colors.neutralDark, fontWeight: '300' },
   headerTitle: { fontSize: 16, fontWeight: '600', color: Colors.neutralDark },
-  moreBtn: { padding: 8 },
+  moreBtn: { padding: 8, minWidth: 60, alignItems: 'flex-end' },
   moreIcon: { fontSize: 22, color: Colors.neutralDark },
+  editAdminText: { fontSize: 13, fontWeight: '700', color: Colors.greenPrimary },
   heroContainer: { position: 'relative' },
   heroImage: { height: 240, width: '100%', resizeMode: 'cover' },
   heroImagePlaceholder: {
@@ -278,12 +314,7 @@ const styles = StyleSheet.create({
     height: 56, alignItems: 'center', justifyContent: 'center', marginBottom: Spacing.sm,
   },
   waterBtnText: { color: Colors.white, fontSize: 17, fontWeight: '700' },
-  secondaryRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.md },
-  secondaryBtn: {
-    flex: 1, backgroundColor: Colors.white, borderRadius: Radius.md, height: 48,
-    alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: Colors.neutralLight,
-  },
-  secondaryText: { fontSize: 14, fontWeight: '500', color: Colors.neutralDark },
+
   ecoBox: {
     backgroundColor: Colors.greenLight, borderRadius: Radius.md, padding: Spacing.md,
     marginBottom: Spacing.xxl,
