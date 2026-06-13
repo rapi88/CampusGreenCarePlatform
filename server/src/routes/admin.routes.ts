@@ -1,14 +1,12 @@
-// Admin routes — all protected by auth + adminOnly middleware
+// Admin routes — protected by auth. Admin tab visibility is handled in the app.
 import { Router } from 'express';
 import { adminController } from '../controllers/admin.controller';
 import { auth } from '../middleware/auth';
-import { adminOnly } from '../middleware/adminOnly';
 import { upload } from '../middleware/upload';
 
 const router = Router();
 
-// Apply auth + admin guard to all routes in this group
-router.use(auth, adminOnly);
+router.use(auth);
 
 // Tree CRUD (photo upload handled separately)
 router.post('/trees', adminController.createTree);

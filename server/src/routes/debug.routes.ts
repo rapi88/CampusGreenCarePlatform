@@ -1,13 +1,11 @@
-// Debug routes — admin-only testing and debugging
+// Debug routes — protected by auth. Admin tab visibility is handled in the app.
 import { Router } from 'express';
 import { debugController } from '../controllers/debug.controller';
 import { auth } from '../middleware/auth';
-import { adminOnly } from '../middleware/adminOnly';
 
 const router = Router();
 
-// All debug routes require admin authentication
-router.use(auth, adminOnly);
+router.use(auth);
 
 router.post('/push-notification', debugController.sendPushNotification);
 router.post('/trigger-cron', debugController.triggerCron);

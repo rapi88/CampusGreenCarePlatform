@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Image,
-  ActivityIndicator, Alert, Platform,
+  ActivityIndicator, Alert, Platform, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -29,7 +29,7 @@ export default function EditProfileScreen() {
       if (source === 'camera') {
         const { status } = await ImagePicker.requestCameraPermissionsAsync();
         if (status !== 'granted') {
-          Alert.alert('Permission required', 'Camera access is needed to take a photo.');
+          Alert.alert('İzin gerekli', 'Fotoğraf çekmek için kamera erişimi gerekir.');
           return;
         }
         result = await ImagePicker.launchCameraAsync({
@@ -40,7 +40,7 @@ export default function EditProfileScreen() {
       } else {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
-          Alert.alert('Permission required', 'Photo library access is needed to pick a photo.');
+          Alert.alert('İzin gerekli', 'Fotoğraf seçmek için galeri erişimi gerekir.');
           return;
         }
         result = await ImagePicker.launchImageLibraryAsync({
@@ -56,7 +56,7 @@ export default function EditProfileScreen() {
       const asset = result.assets[0];
       uploadAvatar(asset.uri, asset.mimeType ?? 'image/jpeg');
     } catch (e: any) {
-      Toast.show({ type: 'error', text1: 'Error', text2: e?.message ?? 'Failed to open picker' });
+      Toast.show({ type: 'error', text1: 'Hata', text2: e?.message ?? 'Seçici açılamadı' });
     }
   };
 
@@ -72,9 +72,9 @@ export default function EditProfileScreen() {
 
       const res = await authApi.uploadAvatar(formData);
       updateUser({ avatarUrl: res.data.avatarUrl });
-      Toast.show({ type: 'success', text1: 'Photo updated', text2: 'Your profile picture was saved.' });
+      Toast.show({ type: 'success', text1: 'Fotoğraf güncellendi', text2: 'Profil fotoğrafınız kaydedildi.' });
     } catch (e: any) {
-      Toast.show({ type: 'error', text1: 'Upload failed', text2: e?.response?.data?.message ?? 'Try again.' });
+      Toast.show({ type: 'error', text1: 'Yükleme başarısız', text2: e?.response?.data?.message ?? 'Tekrar deneyin.' });
     } finally {
       setUploading(false);
     }
@@ -85,10 +85,10 @@ export default function EditProfileScreen() {
       pickImage('library');
       return;
     }
-    Alert.alert('Change Profile Photo', undefined, [
-      { text: 'Take Photo', onPress: () => pickImage('camera') },
-      { text: 'Choose from Library', onPress: () => pickImage('library') },
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert('Profil Fotoğrafını Değiştir', undefined, [
+      { text: 'Fotoğraf Cek', onPress: () => pickImage('camera') },
+      { text: 'Galeriden Seç', onPress: () => pickImage('library') },
+      { text: 'İptal', style: 'cancel' },
     ]);
   };
 
@@ -96,13 +96,13 @@ export default function EditProfileScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.back}>‹ Back</Text>
+          <Text style={styles.back}>‹ Geri</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Edit Profile</Text>
+        <Text style={styles.headerTitle}>Profili Düzenle</Text>
         <View style={{ width: 60 }} />
       </View>
 
-      <View style={styles.body}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         {/* Avatar */}
         <TouchableOpacity style={styles.avatarWrapper} onPress={handlePickSource} disabled={uploading}>
           {user?.avatarUrl ? (
@@ -118,16 +118,16 @@ export default function EditProfileScreen() {
               : <Text style={styles.cameraIcon}>📷</Text>}
           </View>
         </TouchableOpacity>
-        <Text style={styles.avatarHint}>Tap to change photo</Text>
+        <Text style={styles.avatarHint}>Fotoğrafı değiştirmek için dokunun</Text>
 
         {/* Name field — display only, no backend endpoint yet */}
-        <FormInput label="Full Name" value={name} onChangeText={setName} />
-        <Text style={styles.fieldNote}>Name changes are not yet saved to the server.</Text>
+        <FormInput label="Ad Soyad" value={name} onChangeText={setName} />
+        <Text style={styles.fieldNote}>Ad değişiklikleri henüz sunucuya kaydedilmiyor.</Text>
 
         <ScaleButton style={styles.saveBtn} onPress={() => navigation.goBack()}>
-          <Text style={styles.saveBtnText}>Done</Text>
+          <Text style={styles.saveBtnText}>Tamam</Text>
         </ScaleButton>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -140,7 +140,8 @@ const styles = StyleSheet.create({
   },
   back: { color: Colors.greenPrimary, fontSize: 16, fontWeight: '500' },
   headerTitle: { fontSize: 16, fontWeight: '600', color: Colors.neutralDark },
-  body: { padding: Spacing.lg, alignItems: 'center' },
+  scroll: { flex: 1 },
+  body: { flexGrow: 1, padding: Spacing.lg, paddingBottom: 120, alignItems: 'center' },
 
   // Avatar
   avatarWrapper: { position: 'relative', marginBottom: 8, marginTop: Spacing.lg },

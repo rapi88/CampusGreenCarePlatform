@@ -1,7 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
-import { Text } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { Colors } from '../theme/colors';
 import { useAuthStore } from '../store/auth.store';
 
@@ -61,7 +61,7 @@ const ProfileStack = createStackNavigator();
 
 function ProfileNavigator() {
   return (
-    <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
+    <ProfileStack.Navigator screenOptions={{ headerShown: false, cardStyle: styles.scene }}>
       <ProfileStack.Screen name="Profile" component={ProfileScreen} />
       <ProfileStack.Screen name="EditProfile" component={EditProfileScreen} />
       <ProfileStack.Screen name="Leaderboard" component={LeaderboardScreen} />
@@ -86,6 +86,7 @@ function TabNavigator() {
           height: 60,
           paddingBottom: 8,
         },
+        sceneStyle: styles.scene,
         tabBarLabel: ({ color }) => {
           const labels: Record<string, string> = {
             MapTab: 'Harita',
@@ -125,7 +126,7 @@ function TabNavigator() {
 
 export default function MainTabs() {
   return (
-    <AppStack.Navigator screenOptions={{ headerShown: false }}>
+    <AppStack.Navigator screenOptions={{ headerShown: false, cardStyle: styles.scene }}>
       <AppStack.Screen name="Tabs" component={TabNavigator} />
       <AppStack.Screen name="TreeDetail" component={TreeDetailScreen} />
       <AppStack.Screen name="Watering" component={WateringScreen} />
@@ -142,3 +143,7 @@ export default function MainTabs() {
     </AppStack.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  scene: { flex: 1, backgroundColor: Colors.neutralBg },
+});

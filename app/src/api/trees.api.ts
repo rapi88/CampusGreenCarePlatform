@@ -24,6 +24,7 @@ export interface Tree {
   isAdopted?: boolean;
   isSuggested?: boolean;
   suggestionId?: string;
+  rejectionReason?: string | null;
   volunteers?: { id: string; name: string; avatarUrl: string | null }[];
 }
 
