@@ -60,7 +60,7 @@ export default function MapScreen() {
     mutationFn: (data: Partial<Tree>) => adminApi.createTree(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trees'] });
-      Toast.show({ type: 'success', text1: 'Success', text2: 'Tree added successfully' });
+      Toast.show({ type: 'success', text1: 'Başarılı', text2: 'Ağaç başarıyla eklendi' });
       setShowAddModal(false);
       setIsAddingTree(false);
       setPendingPin(null);
@@ -71,7 +71,7 @@ export default function MapScreen() {
   const suggestTreeMutation = useMutation({
     mutationFn: (data: Partial<Tree>) => treesApi.suggest(data),
     onSuccess: () => {
-      Toast.show({ type: 'success', text1: 'Success', text2: 'Tree suggestion sent for admin approval' });
+      Toast.show({ type: 'success', text1: 'Başarılı', text2: 'Ağaç önerisi admin onayına gönderildi' });
       setShowAddModal(false);
       setIsSuggestingTree(false);
       setPendingPin(null);
@@ -160,10 +160,10 @@ export default function MapScreen() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Text style={styles.logoEmoji}>🌳</Text>
-          <Text style={styles.appName}>Tree Tracker</Text>
+          <Text style={styles.appName}>Ağaç Takip</Text>
         </View>
         <TouchableOpacity style={styles.viewToggle} onPress={() => setViewMode(viewMode === 'map' ? 'list' : 'map')}>
-          <Text style={styles.viewToggleText}>{viewMode === 'map' ? '☰ List' : '🗺️ Map'}</Text>
+          <Text style={styles.viewToggleText}>{viewMode === 'map' ? '☰ Liste' : '🗺️ Harita'}</Text>
         </TouchableOpacity>
       </View>
 
@@ -172,7 +172,7 @@ export default function MapScreen() {
         <View style={styles.addBanner}>
           <Text style={styles.addBannerIcon}>📌</Text>
           <Text style={styles.addBannerText}>
-            Click on the map to select the tree location
+            Ağaç konumunu seçmek için haritaya dokunun
           </Text>
         </View>
       )}
@@ -184,7 +184,7 @@ export default function MapScreen() {
             <Text style={styles.searchIcon}>🔍</Text>
             <TextInput
               style={styles.searchInput}
-              placeholder="Find a tree nearby..."
+              placeholder="Yakında bir ağaç bulun..."
               value={search}
               onChangeText={setSearch}
               placeholderTextColor={Colors.neutralMid}
@@ -208,7 +208,7 @@ export default function MapScreen() {
               onPress={() => setFilterStatus(s as any)}
             >
               <Text style={[styles.filterText, filterStatus === s && styles.filterTextActive]}>
-                {s === null ? 'All' : s === 'watered' ? '🟢 Watered' : s === 'needs_water' ? '🔴 Needs Water' : '🟠 Due Soon'}
+                {s === null ? 'Tümu' : s === 'watered' ? '🟢 Sulandı' : s === 'needs_water' ? '🔴 Su Gerekli' : '🟠 Yakında Gerekli'}
               </Text>
             </TouchableOpacity>
           ))}
@@ -245,7 +245,7 @@ export default function MapScreen() {
                 <Text style={styles.previewLocation}>📍 {selectedTree.location}</Text>
                 <View style={styles.previewRow}>
                   <StatusChip status={selectedTree.hydrationStatus as any} size="sm" />
-                  <Text style={styles.previewDist}>{formatDistance(selectedTree.distanceM)} away</Text>
+                  <Text style={styles.previewDist}>{formatDistance(selectedTree.distanceM)} uzakta</Text>
                 </View>
               </View>
               <Text style={styles.previewArrow}>›</Text>
@@ -256,14 +256,14 @@ export default function MapScreen() {
           {(isAddingTree || isSuggestingTree) && pendingPin && (
             <View style={styles.confirmCard}>
               <View style={styles.confirmInfo}>
-                <Text style={styles.confirmTitle}>📍 Location Selected</Text>
+                <Text style={styles.confirmTitle}>📍 Konum Seçildi</Text>
                 <Text style={styles.confirmCoords}>
                   {pendingPin.lat.toFixed(6)}, {pendingPin.lng.toFixed(6)}
                 </Text>
-                <Text style={styles.confirmHint}>You can adjust the location by dragging the pin</Text>
+                <Text style={styles.confirmHint}>Konumu pini sürükleyerek ayarlayabilirsiniz</Text>
               </View>
               <TouchableOpacity style={styles.confirmBtn} onPress={handleConfirmPin}>
-                <Text style={styles.confirmBtnText}>Continue →</Text>
+                <Text style={styles.confirmBtnText}>Devam →</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -290,7 +290,9 @@ export default function MapScreen() {
         <FlatList
           data={filtered}
           keyExtractor={(t) => t.id}
+          style={styles.listContainer}
           contentContainerStyle={styles.list}
+          keyboardShouldPersistTaps="handled"
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.listCard}
@@ -310,7 +312,7 @@ export default function MapScreen() {
           ListEmptyComponent={
             <View style={styles.empty}>
               <Text style={styles.emptyEmoji}>🔍</Text>
-              <Text style={styles.emptyText}>No trees found</Text>
+              <Text style={styles.emptyText}>Ağaç bulunamadı</Text>
             </View>
           }
         />
@@ -429,7 +431,8 @@ const styles = StyleSheet.create({
     lineHeight: 30,
   },
   // List
-  list: { padding: Spacing.md, gap: Spacing.sm },
+  listContainer: { flex: 1 },
+  list: { flexGrow: 1, padding: Spacing.md, gap: Spacing.sm, paddingBottom: 120 },
   listCard: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.white,
     borderRadius: Radius.lg, padding: Spacing.md, ...Shadow.card,

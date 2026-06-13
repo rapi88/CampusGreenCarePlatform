@@ -9,13 +9,18 @@ const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/api';
 export const api = axios.create({
   baseURL: BASE_URL,
   timeout: 10000,
-  headers: { 'Content-Type': 'application/json' },
 });
 
 // Attach JWT token to every request
 api.interceptors.request.use(async (config) => {
   const token = await AsyncStorage.getItem('token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
+
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+    delete (config.headers as any)['Content-Type'];
+    delete (config.headers as any)['content-type'];
+  }
+
   return config;
 });
 
@@ -31,7 +36,7 @@ api.interceptors.response.use(
     const errorMessage = extractError(error);
     Toast.show({
       type: 'error',
-      text1: 'Error',
+      text1: 'Hata',
       text2: errorMessage,
       position: 'top',
     });

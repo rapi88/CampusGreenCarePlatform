@@ -1,6 +1,6 @@
 // Adoption screen
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, ScrollView } from 'react-native';
 import ScaleButton from '../../components/common/ScaleButton';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -29,11 +29,11 @@ export default function AdoptionScreen({ route, navigation }: Props) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tree', treeId] });
       queryClient.invalidateQueries({ queryKey: ['trees'] });
-      Toast.show({ type: 'success', text1: 'Success', text2: 'You have adopted this tree!' });
+      Toast.show({ type: 'success', text1: 'Başarılı', text2: 'Bu ağacı sahiplendiniz!' });
       navigation.goBack();
     },
     onError: () => {
-      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to adopt the tree.' });
+      Toast.show({ type: 'error', text1: 'Hata', text2: 'Ağaç sahiplenilemedi.' });
     }
   });
 
@@ -42,11 +42,11 @@ export default function AdoptionScreen({ route, navigation }: Props) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tree', treeId] });
       queryClient.invalidateQueries({ queryKey: ['trees'] });
-      Toast.show({ type: 'success', text1: 'Success', text2: 'You have unadopted this tree.' });
+      Toast.show({ type: 'success', text1: 'Başarılı', text2: 'Bu ağacın sahiplenmesini bıraktınız.' });
       navigation.goBack();
     },
     onError: () => {
-      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to unadopt the tree.' });
+      Toast.show({ type: 'error', text1: 'Hata', text2: 'Ağaç sahiplenmesi bırakılamadı.' });
     }
   });
 
@@ -63,7 +63,7 @@ export default function AdoptionScreen({ route, navigation }: Props) {
   if (!tree) {
     return (
       <SafeAreaView style={[styles.safe, styles.center]}>
-        <Text style={{ color: Colors.neutralMid }}>Tree not found.</Text>
+        <Text style={{ color: Colors.neutralMid }}>Ağaç bulunamadı.</Text>
       </SafeAreaView>
     );
   }
@@ -82,19 +82,19 @@ export default function AdoptionScreen({ route, navigation }: Props) {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.back}>‹ Back</Text></TouchableOpacity>
-        <Text style={styles.headerTitle}>Adopt Tree</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.back}>‹ Geri</Text></TouchableOpacity>
+        <Text style={styles.headerTitle}>Ağaç Sahiplen</Text>
         <View style={{ width: 60 }} />
       </View>
 
-      <View style={styles.body}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.body}>
         <Text style={styles.treeIcon}>🌳</Text>
         <Text style={styles.title}>{tree.name} #{tree.id.slice(-4)}</Text>
-        <Text style={styles.subtitle}>Adopt this tree to receive watering reminders.</Text>
+        <Text style={styles.subtitle}>Sulama hatırlatıcıları almak için bu ağacı sahiplenin.</Text>
 
         {/* Volunteer slots summary */}
         <View style={styles.slotsSection}>
-          <Text style={styles.slotsTitle}>Volunteers ({tree.volunteerCount}/{tree.maxVolunteers})</Text>
+          <Text style={styles.slotsTitle}>Gönüllüler ({tree.volunteerCount}/{tree.maxVolunteers})</Text>
           <View style={styles.slots}>
             {Array.from({ length: tree.maxVolunteers }).map((_, i) => {
               const volunteer = tree.volunteers?.[i];
@@ -117,8 +117,8 @@ export default function AdoptionScreen({ route, navigation }: Props) {
 
         {/* Info box */}
         <View style={styles.infoBox}>
-          <Text style={styles.infoText}>💧 Once adopted, you will get notifications when it is time to water.</Text>
-          <Text style={styles.infoText}>🌿 A user can adopt multiple trees, but please commit to their care.</Text>
+          <Text style={styles.infoText}>💧 Sahiplendikten sonra sulama zamanı geldiğinde bildirim alırsınız.</Text>
+          <Text style={styles.infoText}>🌿 Bir kullanıcı birden fazla ağaç sahiplenebilir; lütfen bakımını sürdürmeye özen gösterin.</Text>
         </View>
 
         <ScaleButton
@@ -134,11 +134,11 @@ export default function AdoptionScreen({ route, navigation }: Props) {
              <ActivityIndicator color={Colors.white} />
           ) : (
             <Text style={styles.adoptBtnText}>
-              {isAdoptedByMe ? '👋 Unadopt This Tree' : isFull ? 'No Slots Available' : '🤝 Adopt This Tree'}
+              {isAdoptedByMe ? '👋 Bu Ağacı Bırak' : isFull ? 'Boş Yer Yok' : '🤝 Bu Ağacı Sahiplen'}
             </Text>
           )}
         </ScaleButton>
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -149,7 +149,8 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: Spacing.md, backgroundColor: Colors.white },
   back: { color: Colors.greenPrimary, fontSize: 16, fontWeight: '500' },
   headerTitle: { fontSize: 16, fontWeight: '600', color: Colors.neutralDark },
-  body: { flex: 1, padding: Spacing.lg, alignItems: 'center' },
+  scroll: { flex: 1 },
+  body: { flexGrow: 1, padding: Spacing.lg, paddingBottom: 120, alignItems: 'center' },
   treeIcon: { fontSize: 72, marginTop: Spacing.xl, marginBottom: Spacing.md },
   title: { fontSize: 24, fontWeight: '700', color: Colors.neutralDark, marginBottom: 6 },
   subtitle: { fontSize: 14, color: Colors.neutralMid, textAlign: 'center', marginBottom: Spacing.xl },

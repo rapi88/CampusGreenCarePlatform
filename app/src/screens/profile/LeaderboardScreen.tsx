@@ -10,8 +10,8 @@ import { leaderboardApi } from '../../api/leaderboard.api';
 import { useAuthStore } from '../../store/auth.store';
 
 const TABS = [
-  { label: 'All Time', period: 'alltime' as const },
-  { label: 'Monthly', period: 'monthly' as const }
+  { label: 'Tüm Zamanlar', period: 'alltime' as const },
+  { label: 'Aylık', period: 'monthly' as const }
 ];
 
 const rankEmoji = (r: number) => r === 1 ? '🥇' : r === 2 ? '🥈' : r === 3 ? '🥉' : `${r}.`;
@@ -32,8 +32,8 @@ export default function LeaderboardScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.back}>‹ Back</Text></TouchableOpacity>
-        <Text style={styles.headerTitle}>🏆 Leaderboard</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.back}>‹ Geri</Text></TouchableOpacity>
+        <Text style={styles.headerTitle}>🏆 Liderlik Tablosu</Text>
         <View style={{ width: 60 }} />
       </View>
       <View style={styles.tabs}>
@@ -52,7 +52,9 @@ export default function LeaderboardScreen() {
         <FlatList
           data={leaderboardData}
           keyExtractor={(r: any) => String(r.userId)}
+          style={styles.listContainer}
           contentContainerStyle={styles.list}
+          keyboardShouldPersistTaps="handled"
           renderItem={({ item }) => {
             const isMe = item.userId === user?.id;
             return (
@@ -64,13 +66,13 @@ export default function LeaderboardScreen() {
                   </Text>
                 </View>
                 <Text style={[styles.name, isMe && styles.nameMe]}>{item.name}</Text>
-                <Text style={[styles.score, isMe && styles.scoreMe]}>{item.points || item.wateringCount || 0} pts</Text>
+                <Text style={[styles.score, isMe && styles.scoreMe]}>{item.points || item.wateringCount || 0} puan</Text>
               </View>
             );
           }}
           ListEmptyComponent={
             <View style={{ alignItems: 'center', marginTop: Spacing.xl }}>
-              <Text style={{ color: Colors.neutralMid }}>No leaderboard data available.</Text>
+              <Text style={{ color: Colors.neutralMid }}>Liderlik verisi bulunamadı.</Text>
             </View>
           }
         />
@@ -90,7 +92,8 @@ const styles = StyleSheet.create({
   tabActive: { backgroundColor: Colors.greenPrimary },
   tabText: { fontSize: 13, fontWeight: '600', color: Colors.neutralMid },
   tabTextActive: { color: Colors.white },
-  list: { paddingHorizontal: Spacing.md, gap: Spacing.sm, paddingBottom: Spacing.xl },
+  listContainer: { flex: 1 },
+  list: { flexGrow: 1, paddingHorizontal: Spacing.md, gap: Spacing.sm, paddingBottom: 120 },
   row: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.white, borderRadius: Radius.lg, padding: Spacing.md, gap: 12, ...Shadow.card },
   rowMe: { borderWidth: 2, borderColor: Colors.greenPrimary },
   rank: { fontSize: 20, width: 32, textAlign: 'center' },

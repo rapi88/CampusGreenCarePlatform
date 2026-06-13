@@ -24,9 +24,9 @@ interface AddTreeModalProps {
 }
 
 const HEALTH_OPTIONS: { value: 'Healthy' | 'Sick' | 'Critical'; label: string; emoji: string; color: string }[] = [
-  { value: 'Healthy', label: 'Healthy', emoji: '🟢', color: Colors.statusOk },
-  { value: 'Sick', label: 'Sick', emoji: '🟠', color: Colors.statusSoon },
-  { value: 'Critical', label: 'Critical', emoji: '🔴', color: Colors.statusDue },
+  { value: 'Healthy', label: 'Sağlıklı', emoji: '🟢', color: Colors.statusOk },
+  { value: 'Sick', label: 'Hasta', emoji: '🟠', color: Colors.statusSoon },
+  { value: 'Critical', label: 'Kritik', emoji: '🔴', color: Colors.statusDue },
 ];
 
 export default function AddTreeModal({ visible, coordinates, onClose, onSubmit, isSuggesting = false }: AddTreeModalProps) {
@@ -38,9 +38,9 @@ export default function AddTreeModal({ visible, coordinates, onClose, onSubmit, 
 
   const handleSubmit = () => {
     const newErrors: typeof errors = {};
-    if (!name.trim()) newErrors.name = 'Tree name required';
-    if (!species.trim()) newErrors.species = 'Species required';
-    if (!location.trim()) newErrors.location = 'Location description required';
+    if (!name.trim()) newErrors.name = 'Ağaç adı zorunludur';
+    if (!species.trim()) newErrors.species = 'Tür zorunludur';
+    if (!location.trim()) newErrors.location = 'Konum açıklaması zorunludur';
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -92,7 +92,7 @@ export default function AddTreeModal({ visible, coordinates, onClose, onSubmit, 
             <View style={styles.modalHeader}>
               <View style={styles.headerTitle}>
                 <Text style={styles.headerEmoji}>🌱</Text>
-                <Text style={styles.headerText}>{isSuggesting ? 'Suggest a Tree' : 'Add New Tree'}</Text>
+                <Text style={styles.headerText}>{isSuggesting ? 'Ağaç Öner' : 'Yeni Ağaç Ekle'}</Text>
               </View>
               <TouchableOpacity style={styles.closeBtn} onPress={handleClose}>
                 <Text style={styles.closeBtnText}>✕</Text>
@@ -105,7 +105,7 @@ export default function AddTreeModal({ visible, coordinates, onClose, onSubmit, 
                 <View style={styles.coordsCard}>
                   <Text style={styles.coordsIcon}>📍</Text>
                   <View style={styles.coordsInfo}>
-                    <Text style={styles.coordsLabel}>Selected Location</Text>
+                    <Text style={styles.coordsLabel}>Seçili Konum</Text>
                     <Text style={styles.coordsText}>
                       {coordinates.lat.toFixed(6)}, {coordinates.lng.toFixed(6)}
                     </Text>
@@ -115,10 +115,10 @@ export default function AddTreeModal({ visible, coordinates, onClose, onSubmit, 
 
               {/* Tree name */}
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Tree Name *</Text>
+                <Text style={styles.fieldLabel}>Ağaç Adı *</Text>
                 <TextInput
                   style={[styles.input, errors.name ? styles.inputError : null]}
-                  placeholder="e.g. White Oak #048"
+                  placeholder="örn. Beyaz Meşe #048"
                   value={name}
                   onChangeText={(t) => { setName(t); setErrors((e) => ({ ...e, name: undefined })); }}
                   placeholderTextColor={Colors.neutralMid}
@@ -128,10 +128,10 @@ export default function AddTreeModal({ visible, coordinates, onClose, onSubmit, 
 
               {/* Species */}
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Species *</Text>
+                <Text style={styles.fieldLabel}>Tur *</Text>
                 <TextInput
                   style={[styles.input, errors.species ? styles.inputError : null]}
-                  placeholder="e.g. Quercus alba"
+                  placeholder="örn. Quercus alba"
                   value={species}
                   onChangeText={(t) => { setSpecies(t); setErrors((e) => ({ ...e, species: undefined })); }}
                   placeholderTextColor={Colors.neutralMid}
@@ -141,10 +141,10 @@ export default function AddTreeModal({ visible, coordinates, onClose, onSubmit, 
 
               {/* Location description */}
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Location Description *</Text>
+                <Text style={styles.fieldLabel}>Konum Açıklaması *</Text>
                 <TextInput
                   style={[styles.input, errors.location ? styles.inputError : null]}
-                  placeholder="e.g. Front of Library, Block B"
+                  placeholder="örn. Kutuphane onu, B Blok"
                   value={location}
                   onChangeText={(t) => { setLocation(t); setErrors((e) => ({ ...e, location: undefined })); }}
                   placeholderTextColor={Colors.neutralMid}
@@ -154,7 +154,7 @@ export default function AddTreeModal({ visible, coordinates, onClose, onSubmit, 
 
               {/* Health selection */}
               <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>Tree Health</Text>
+                <Text style={styles.fieldLabel}>Ağaç Sağlığı</Text>
                 <View style={styles.statusOptions}>
                   {HEALTH_OPTIONS.map((opt) => (
                     <TouchableOpacity
@@ -181,10 +181,10 @@ export default function AddTreeModal({ visible, coordinates, onClose, onSubmit, 
             {/* Actions */}
             <View style={styles.actions}>
               <TouchableOpacity style={styles.cancelBtn} onPress={handleClose}>
-                <Text style={styles.cancelBtnText}>Cancel</Text>
+                <Text style={styles.cancelBtnText}>İptal</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
-                <Text style={styles.submitBtnText}>{isSuggesting ? '🌟 Suggest Tree' : '🌳 Add Tree'}</Text>
+                <Text style={styles.submitBtnText}>{isSuggesting ? '🌟 Ağaç Öner' : '🌳 Ağaç Ekle'}</Text>
               </TouchableOpacity>
             </View>
           </View>

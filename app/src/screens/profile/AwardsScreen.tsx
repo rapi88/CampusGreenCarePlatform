@@ -1,42 +1,63 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TextInput, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors } from '../../theme/colors';
-import { Spacing, Radius, Shadow } from '../../theme/spacing';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import Toast from 'react-native-toast-message';
-import { awardApi } from '../../api/award.api';
-import { useAuthStore } from '../../store/auth.store';
-import ScaleButton from '../../components/common/ScaleButton';
+import React, { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  ScrollView,
+  TextInput,
+  ActivityIndicator,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Colors } from "../../theme/colors";
+import { Spacing, Radius, Shadow } from "../../theme/spacing";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import Toast from "react-native-toast-message";
+import { awardApi } from "../../api/award.api";
+import { useAuthStore } from "../../store/auth.store";
+import ScaleButton from "../../components/common/ScaleButton";
 
 export default function AwardsScreen() {
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
-  const isAdmin = user?.role === 'ADMIN';
+  const isAdmin = user?.role === "ADMIN";
 
-  const [awardUrl, setAwardUrl] = useState('');
-  const [awardText, setAwardText] = useState('');
+  const [awardUrl, setAwardUrl] = useState("");
+  const [awardText, setAwardText] = useState("");
 
   const { data: awardResp, isLoading } = useQuery({
-    queryKey: ['weeklyAward'],
+    queryKey: ["weeklyAward"],
     queryFn: () => awardApi.getWeeklyAward(),
   });
 
   useEffect(() => {
     if (awardResp?.data) {
-      setAwardUrl(awardResp.data.photoUrl || '');
-      setAwardText(awardResp.data.text || '');
+      setAwardUrl(awardResp.data.photoUrl || "");
+      setAwardText(awardResp.data.text || "");
     }
   }, [awardResp]);
 
   const updateAwardMutation = useMutation({
-    mutationFn: () => awardApi.updateWeeklyAward({ photoUrl: awardUrl, text: awardText, userId: null }),
+    mutationFn: () =>
+      awardApi.updateWeeklyAward({
+        photoUrl: awardUrl,
+        text: awardText,
+        userId: null,
+      }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['weeklyAward'] });
-      Toast.show({ type: 'success', text1: 'Success', text2: 'Award updated!' });
+      queryClient.invalidateQueries({ queryKey: ["weeklyAward"] });
+      Toast.show({
+        type: "success",
+        text1: "Başarılı",
+        text2: "Ödül güncellendi!",
+      });
     },
     onError: () => {
-      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to update award' });
+      Toast.show({
+        type: "error",
+        text1: "Hata",
+        text2: "Ödül güncellenemedi",
+      });
     },
   });
 
@@ -44,11 +65,11 @@ export default function AwardsScreen() {
   const displayText = awardResp?.data?.text;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={["top"]}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>🏆 Ödüller</Text>
       </View>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         {/* Award display */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Haftanın En Çok Sulayanı 💧</Text>
@@ -56,10 +77,17 @@ export default function AwardsScreen() {
             Kampüsümüzü yeşillendiren gönüllülerimize teşekkür ederiz!
           </Text>
           {isLoading ? (
-            <ActivityIndicator color={Colors.greenPrimary} style={{ marginVertical: Spacing.xl }} />
+            <ActivityIndicator
+              color={Colors.greenPrimary}
+              style={{ marginVertical: Spacing.xl }}
+            />
           ) : topWatererPhotoUrl ? (
             <View style={styles.imageContainer}>
-              <Image source={{ uri: topWatererPhotoUrl }} style={styles.image} resizeMode="cover" />
+              <Image
+                source={{ uri: topWatererPhotoUrl }}
+                style={styles.image}
+                resizeMode="cover"
+              />
               {displayText ? (
                 <View style={styles.textOverlay}>
                   <Text style={styles.overlayText}>{displayText}</Text>
@@ -68,7 +96,9 @@ export default function AwardsScreen() {
             </View>
           ) : (
             <View style={styles.placeholder}>
-              <Text style={styles.placeholderText}>Henüz fotoğraf paylaşılmadı.</Text>
+              <Text style={styles.placeholderText}>
+                Henüz fotoğraf paylaşılmadı.
+              </Text>
             </View>
           )}
         </View>
@@ -76,10 +106,10 @@ export default function AwardsScreen() {
         {/* Admin-only award editor */}
         {isAdmin && (
           <View style={styles.editorCard}>
-            <Text style={styles.editorTitle}>⚙️ Update Award of the Week</Text>
+            <Text style={styles.editorTitle}>⚙️ Haftanın Ödülünü Güncelle</Text>
             <TextInput
               style={styles.input}
-              placeholder="Paste photo URL..."
+              placeholder="Fotoğraf URL'sini yapıştırın..."
               value={awardUrl}
               onChangeText={setAwardUrl}
               autoCapitalize="none"
@@ -87,7 +117,7 @@ export default function AwardsScreen() {
             />
             <TextInput
               style={styles.input}
-              placeholder="Text shown on the award..."
+              placeholder="Ödülde goruneçek metin..."
               value={awardText}
               onChangeText={setAwardText}
             />
@@ -99,7 +129,7 @@ export default function AwardsScreen() {
               {updateAwardMutation.isPending ? (
                 <ActivityIndicator color={Colors.white} />
               ) : (
-                <Text style={styles.saveBtnText}>💾 Save Award</Text>
+                <Text style={styles.saveBtnText}>💾 Ödülü Kaydet</Text>
               )}
             </ScaleButton>
           </View>
@@ -111,47 +141,96 @@ export default function AwardsScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.neutralBg },
+  scroll: { flex: 1 },
   header: {
     padding: Spacing.md,
     backgroundColor: Colors.white,
     borderBottomWidth: 1,
     borderBottomColor: Colors.neutralLight,
   },
-  headerTitle: { fontSize: 20, fontWeight: '800', color: Colors.neutralDark },
-  content: { padding: Spacing.md, gap: Spacing.md, paddingBottom: Spacing.xxl },
+  headerTitle: { fontSize: 20, fontWeight: "800", color: Colors.neutralDark },
+  content: { flexGrow: 1, padding: Spacing.md, gap: Spacing.md, paddingBottom: 120 },
   card: {
     backgroundColor: Colors.white,
     borderRadius: Radius.lg,
     padding: Spacing.md,
     ...Shadow.card,
-    alignItems: 'center',
+    alignItems: "center",
   },
-  cardTitle: { fontSize: 18, fontWeight: '700', color: Colors.greenDark, marginBottom: Spacing.xs },
-  cardSubtitle: { fontSize: 14, color: Colors.neutralMid, textAlign: 'center', marginBottom: Spacing.md },
-  imageContainer: { width: '100%', height: 300, borderRadius: Radius.md, overflow: 'hidden' },
-  image: { width: '100%', height: '100%', backgroundColor: Colors.neutralLight },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: Colors.greenDark,
+    marginBottom: Spacing.xs,
+  },
+  cardSubtitle: {
+    fontSize: 14,
+    color: Colors.neutralMid,
+    textAlign: "center",
+    marginBottom: Spacing.md,
+  },
+  imageContainer: {
+    width: "100%",
+    height: 300,
+    borderRadius: Radius.md,
+    overflow: "hidden",
+  },
+  image: {
+    width: "100%",
+    height: "100%",
+    backgroundColor: Colors.neutralLight,
+  },
   textOverlay: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    backgroundColor: 'rgba(0,0,0,0.6)', padding: Spacing.sm,
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    padding: Spacing.sm,
   },
-  overlayText: { color: Colors.white, fontSize: 16, fontWeight: '600', textAlign: 'center' },
+  overlayText: {
+    color: Colors.white,
+    fontSize: 16,
+    fontWeight: "600",
+    textAlign: "center",
+  },
   placeholder: {
-    width: '100%', height: 300, borderRadius: Radius.md, backgroundColor: Colors.neutralLight,
-    justifyContent: 'center', alignItems: 'center',
+    width: "100%",
+    height: 300,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.neutralLight,
+    justifyContent: "center",
+    alignItems: "center",
   },
   placeholderText: { color: Colors.neutralMid, fontSize: 14 },
   editorCard: {
-    backgroundColor: Colors.white, borderRadius: Radius.lg, padding: Spacing.md,
-    ...Shadow.card, gap: Spacing.sm,
+    backgroundColor: Colors.white,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    ...Shadow.card,
+    gap: Spacing.sm,
   },
-  editorTitle: { fontSize: 15, fontWeight: '700', color: Colors.neutralDark, marginBottom: Spacing.xs },
+  editorTitle: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: Colors.neutralDark,
+    marginBottom: Spacing.xs,
+  },
   input: {
-    backgroundColor: Colors.neutralBg, borderRadius: Radius.md,
-    padding: Spacing.sm, fontSize: 14, borderWidth: 1, borderColor: Colors.neutralLight,
+    backgroundColor: Colors.neutralBg,
+    borderRadius: Radius.md,
+    padding: Spacing.sm,
+    fontSize: 14,
+    borderWidth: 1,
+    borderColor: Colors.neutralLight,
   },
   saveBtn: {
-    backgroundColor: Colors.greenPrimary, borderRadius: Radius.md,
-    height: 48, alignItems: 'center', justifyContent: 'center', marginTop: Spacing.xs,
+    backgroundColor: Colors.greenPrimary,
+    borderRadius: Radius.md,
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: Spacing.xs,
   },
-  saveBtnText: { color: Colors.white, fontWeight: '700', fontSize: 15 },
+  saveBtnText: { color: Colors.white, fontWeight: "700", fontSize: 15 },
 });

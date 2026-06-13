@@ -52,8 +52,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       'expo-image-picker',
       {
-        photosPermission: 'Allow Campus Green Care to access your photos to set a profile picture.',
-        cameraPermission: 'Allow Campus Green Care to use the camera to take a profile photo.',
+        photosPermission: 'Profil fotoğrafı ayarlamak için Campus Green Care uygulamasının fotoğraflarınıza erişmesine izin verin.',
+        cameraPermission: 'Profil fotoğrafı çekmek için Campus Green Care uygulamasının kamerayı kullanmasına izin verin.',
       },
     ],
   ],
