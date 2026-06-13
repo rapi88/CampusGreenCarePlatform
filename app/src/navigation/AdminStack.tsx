@@ -1,11 +1,13 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
+import { StyleSheet } from 'react-native';
 import AdminDashboardScreen from '../screens/admin/AdminDashboardScreen';
 import AdminTreeListScreen from '../screens/admin/AdminTreeListScreen';
 import AdminAddEditTreeScreen from '../screens/admin/AdminAddEditTreeScreen';
 import AdminReportsScreen from '../screens/admin/AdminReportsScreen';
 import AdminUserManagementScreen from '../screens/admin/AdminUserManagementScreen';
 import AdminNotificationTestScreen from '../screens/admin/AdminNotificationTestScreen';
+import { Colors } from '../theme/colors';
 
 export type AdminStackParamList = {
   AdminDashboard: undefined;
@@ -20,7 +22,7 @@ const Stack = createStackNavigator<AdminStackParamList>();
 
 export default function AdminStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{ headerShown: false, cardStyle: styles.card }}>
       <Stack.Screen name="AdminDashboard" component={AdminDashboardScreen} />
       <Stack.Screen name="AdminTreeList" component={AdminTreeListScreen} />
       <Stack.Screen name="AdminAddEditTree" component={AdminAddEditTreeScreen} />
@@ -30,3 +32,7 @@ export default function AdminStack() {
     </Stack.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  card: { flex: 1, backgroundColor: Colors.neutralBg },
+});

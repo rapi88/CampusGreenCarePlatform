@@ -21,8 +21,8 @@ export default function AdminUserManagementScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.back}>‹ Back</Text></TouchableOpacity>
-        <Text style={styles.headerTitle}>👥 Users</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.back}>‹ Geri</Text></TouchableOpacity>
+        <Text style={styles.headerTitle}>👥 Kullanıcılar</Text>
         <View style={{ width: 60 }} />
       </View>
 
@@ -34,7 +34,9 @@ export default function AdminUserManagementScreen() {
         <FlatList
           data={users}
           keyExtractor={(u: any) => u.id}
+          style={styles.listContainer}
           contentContainerStyle={styles.list}
+          keyboardShouldPersistTaps="handled"
           renderItem={({ item }) => (
             <View style={styles.card}>
               <View style={styles.avatarCircle}>
@@ -43,13 +45,13 @@ export default function AdminUserManagementScreen() {
               <View style={styles.info}>
                 <Text style={styles.name}>{item.name}</Text>
                 <Text style={styles.email}>{item.email}</Text>
-                <Text style={styles.meta}>🌳 {item.adoptedTrees || 0} trees &nbsp; 🏆 {item.points || 0} points</Text>
+                <Text style={styles.meta}>🌳 {item.adoptedTrees || 0} ağaç &nbsp; 🏆 {item.points || 0} puan</Text>
               </View>
             </View>
           )}
           ListEmptyComponent={
             <View style={{ alignItems: 'center', marginTop: Spacing.xl }}>
-              <Text style={{ color: Colors.neutralMid }}>No users found.</Text>
+              <Text style={{ color: Colors.neutralMid }}>Kullanıcı bulunamadı.</Text>
             </View>
           }
         />
@@ -64,7 +66,8 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: Spacing.md, backgroundColor: Colors.white },
   back: { color: Colors.greenPrimary, fontSize: 16, fontWeight: '500' },
   headerTitle: { fontSize: 16, fontWeight: '700', color: Colors.neutralDark },
-  list: { padding: Spacing.md, gap: Spacing.sm, paddingBottom: Spacing.xl },
+  listContainer: { flex: 1 },
+  list: { flexGrow: 1, padding: Spacing.md, gap: Spacing.sm, paddingBottom: 120 },
   card: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.white, borderRadius: Radius.lg, padding: Spacing.md, ...Shadow.card },
   avatarCircle: { width: 46, height: 46, borderRadius: 23, backgroundColor: Colors.greenLight, alignItems: 'center', justifyContent: 'center', marginRight: Spacing.md },
   avatarInitial: { fontSize: 20, fontWeight: '700', color: Colors.greenDark },

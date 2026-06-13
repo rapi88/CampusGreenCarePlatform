@@ -97,11 +97,12 @@ model Adoption {
 }
 
 model TreeSuggestion {
-  id        String   @id @default(uuid())
-  treeId    String   @unique
-  userId    String
-  dismissed Boolean  @default(false)
-  createdAt DateTime @default(now())
+  id              String   @id @default(uuid())
+  treeId          String   @unique
+  userId          String
+  dismissed       Boolean  @default(false)
+  rejectionReason String?
+  createdAt       DateTime @default(now())
 
   tree Tree @relation(fields: [treeId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

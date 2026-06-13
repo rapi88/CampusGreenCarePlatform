@@ -25,7 +25,7 @@ export default function LoginScreen({ navigation }: Props) {
   const validate = () => {
     let valid = true;
     if (!isGTUEmail(email)) {
-      setEmailError('Please enter a valid GTU email (@gtu.edu.tr)');
+      setEmailError('Lütfen geçerli bir GTU e-postasi girin (@gtu.edu.tr)');
       valid = false;
     } else setEmailError('');
     return valid;
@@ -39,25 +39,25 @@ export default function LoginScreen({ navigation }: Props) {
       await AsyncStorage.setItem('token', res.data.token);
       setAuth(res.data.user, res.data.token);
     } catch (err: any) {
-      Alert.alert('Login Error', err.response?.data?.message ?? 'An error occurred.');
+      Alert.alert('Giriş Hatasi', err.response?.data?.message ?? 'Bir hata oluştu.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.logoCircle}><Text style={styles.logoEmoji}>🌿</Text></View>
-        <Text style={styles.title}>Welcome</Text>
-        <Text style={styles.subtitle}>GTU Campus Green Care Platform</Text>
+        <Text style={styles.title}>Hoş geldin</Text>
+        <Text style={styles.subtitle}>GTU Kampüs Yeşil Bakım Platformu</Text>
       </View>
 
       {/* Form */}
       <View style={styles.form}>
         <FormInput
-          label="GTU Email"
+          label="GTU E-posta"
           placeholder="name.surname@gtu.edu.tr"
           keyboardType="email-address"
           value={email}
@@ -65,8 +65,8 @@ export default function LoginScreen({ navigation }: Props) {
           error={emailError}
         />
         <FormInput
-          label="Password"
-          placeholder="Enter your password"
+          label="Şifre"
+          placeholder="Şifrenizi girin"
           isPassword
           value={password}
           onChangeText={setPassword}
@@ -76,7 +76,7 @@ export default function LoginScreen({ navigation }: Props) {
           onPress={() => navigation.navigate('ForgotPassword')}
           style={styles.forgotLink}
         >
-          <Text style={styles.link}>Forgot password?</Text>
+          <Text style={styles.link}>Şifrenizi mi unuttunuz?</Text>
         </TouchableOpacity>
 
         <ScaleButton
@@ -87,14 +87,14 @@ export default function LoginScreen({ navigation }: Props) {
           {loading ? (
             <ActivityIndicator color={Colors.white} />
           ) : (
-            <Text style={styles.btnText}>Login</Text>
+            <Text style={styles.btnText}>Giriş Yap</Text>
           )}
         </ScaleButton>
 
         <View style={styles.registerRow}>
-          <Text style={styles.muted}>Don't have an account? </Text>
+          <Text style={styles.muted}>Hesabiniz yok mu? </Text>
           <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-            <Text style={styles.link}>Register</Text>
+            <Text style={styles.link}>Kayıt Ol</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -103,7 +103,8 @@ export default function LoginScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, backgroundColor: Colors.neutralBg, padding: Spacing.lg },
+  scroll: { flex: 1, backgroundColor: Colors.neutralBg },
+  container: { flexGrow: 1, backgroundColor: Colors.neutralBg, padding: Spacing.lg, paddingBottom: 120 },
   header: { alignItems: 'center', marginTop: 60, marginBottom: 40 },
   logoCircle: {
     width: 80, height: 80, borderRadius: 40,

@@ -36,7 +36,7 @@ export default function ChatScreen({ route, navigation }: Props) {
       setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 100);
     },
     onError: () => {
-      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to send message.' });
+      Toast.show({ type: 'error', text1: 'Hata', text2: 'Mesaj gönderilemedi.' });
     }
   });
 
@@ -50,10 +50,10 @@ export default function ChatScreen({ route, navigation }: Props) {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.back}>‹ Back</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.back}>‹ Geri</Text></TouchableOpacity>
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>{treeName}</Text>
-          <Text style={styles.headerSub}>Volunteer Chat</Text>
+          <Text style={styles.headerSub}>Gönüllü Sohbeti</Text>
         </View>
         <View style={{ width: 60 }} />
       </View>
@@ -68,7 +68,9 @@ export default function ChatScreen({ route, navigation }: Props) {
             ref={listRef}
             data={messages}
             keyExtractor={(m) => m.id}
+            style={styles.listContainer}
             contentContainerStyle={styles.list}
+            keyboardShouldPersistTaps="handled"
             renderItem={({ item, index }) => {
               const isMe = item.userId === user?.id;
               const showAvatar = !isMe && (index === 0 || messages[index - 1].userId !== item.userId);
@@ -93,7 +95,7 @@ export default function ChatScreen({ route, navigation }: Props) {
         <View style={styles.inputRow}>
           <TextInput
             style={styles.input}
-            placeholder="Write a message…"
+            placeholder="Mesaj yazin…"
             value={text}
             onChangeText={setText}
             multiline
@@ -127,7 +129,8 @@ const styles = StyleSheet.create({
   headerCenter: { alignItems: 'center' },
   headerTitle: { fontSize: 15, fontWeight: '700', color: Colors.neutralDark },
   headerSub: { fontSize: 12, color: Colors.neutralMid },
-  list: { padding: Spacing.md, gap: Spacing.sm },
+  listContainer: { flex: 1 },
+  list: { flexGrow: 1, padding: Spacing.md, gap: Spacing.sm },
   msgRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
   msgRowMe: { flexDirection: 'row-reverse' },
   avatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.greenLight, alignItems: 'center', justifyContent: 'center' },

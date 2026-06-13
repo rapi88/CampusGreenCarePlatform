@@ -1,9 +1,10 @@
 // Admin Add/Edit Tree form
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Switch, ActivityIndicator, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Switch, ActivityIndicator, Modal, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import * as ImagePicker from 'expo-image-picker';
 import Toast from 'react-native-toast-message';
 import { Colors } from '../../theme/colors';
 import { Spacing, Radius } from '../../theme/spacing';
@@ -28,6 +29,8 @@ export default function AdminAddEditTreeScreen() {
   const [isNaturalMonument, setIsNaturalMonument] = useState(false);
   const [showMapModal, setShowMapModal] = useState(false);
   const [tempPin, setTempPin] = useState<{lat: number, lng: number} | null>(null);
+  const [photo, setPhoto] = useState<{ uri: string; mimeType: string; fileName: string } | null>(null);
+  const [existingPhotoUrl, setExistingPhotoUrl] = useState<string | null>(null);
 
   const { data: treeResponse, isLoading: isLoadingTree } = useQuery({
     queryKey: ['tree', treeId],
@@ -45,31 +48,70 @@ export default function AdminAddEditTreeScreen() {
       setLongitude(t.longitude?.toString() || '');
       setWateringPeriodDays(t.wateringPeriodDays?.toString() || '3');
       setIsNaturalMonument(t.isNaturalMonument || false);
+      setExistingPhotoUrl(t.photoUrl || null);
     }
   }, [treeResponse, isEdit]);
 
   const saveMutation = useMutation({
-    mutationFn: (data: Partial<Tree>) => {
-      if (isEdit) {
-        return adminApi.updateTree(treeId, data);
-      } else {
-        return adminApi.createTree(data);
+    mutationFn: async (data: Partial<Tree>) => {
+      const saveResponse = isEdit
+        ? await adminApi.updateTree(treeId, data)
+        : await adminApi.createTree(data);
+
+      if (photo) {
+        const formData = new FormData();
+        formData.append('photo', {
+          uri: photo.uri,
+          type: photo.mimeType,
+          name: photo.fileName,
+        } as any);
+
+        return adminApi.uploadTreePhoto(saveResponse.data.id, formData);
       }
+
+      return saveResponse;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trees'] });
       if (isEdit) queryClient.invalidateQueries({ queryKey: ['tree', treeId] });
-      Toast.show({ type: 'success', text1: 'Success', text2: `Tree ${isEdit ? 'updated' : 'added'} successfully.` });
+      Toast.show({ type: 'success', text1: 'Başarılı', text2: `Ağaç başarıyla ${isEdit ? 'güncellendi' : 'eklendi'}.` });
       navigation.goBack();
     },
-    onError: () => {
-      Toast.show({ type: 'error', text1: 'Error', text2: `Failed to ${isEdit ? 'update' : 'add'} tree.` });
+    onError: (error) => {
+      console.error('Tree save failed:', error);
+      Toast.show({ type: 'error', text1: 'Hata', text2: `Ağaç ${isEdit ? 'güncellenemedi' : 'eklenemedi'}.` });
     }
   });
 
+  const pickPhoto = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('İzin gerekli', 'Ağaç fotoğrafı seçmek için galeri erişimi gerekir.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.85,
+    });
+
+    if (result.canceled || !result.assets?.[0]) return;
+
+    const asset = result.assets[0];
+    const mimeType = asset.mimeType ?? 'image/jpeg';
+    const extension = mimeType.split('/')[1] || 'jpg';
+    setPhoto({
+      uri: asset.uri,
+      mimeType,
+      fileName: asset.fileName ?? `tree-photo.${extension}`,
+    });
+  };
+
   const handleSave = () => {
     if (!name || !species || !location || !latitude || !longitude) {
-      Alert.alert('Missing Fields', 'Please fill in all required fields.');
+      Alert.alert('Eksik Alanlar', 'Lütfen tüm zorunlu alanlari doldurun.');
       return;
     }
     
@@ -108,38 +150,72 @@ export default function AdminAddEditTreeScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.back}>‹ Back</Text></TouchableOpacity>
-        <Text style={styles.headerTitle}>{isEdit ? 'Edit Tree' : '+ Add Tree'}</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.back}>‹ Geri</Text></TouchableOpacity>
+        <Text style={styles.headerTitle}>{isEdit ? 'Ağacı Düzenle' : '+ Ağaç Ekle'}</Text>
         <View style={{ width: 60 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
-        <Text style={styles.sectionLabel}>Tree Information</Text>
-        <FormInput label="Tree Name *" placeholder="e.g. White Oak" value={name} onChangeText={setName} />
-        <FormInput label="Species *" placeholder="e.g. Quercus alba" value={species} onChangeText={setSpecies} />
-        <FormInput label="Location Description *" placeholder="e.g. Central Courtyard" value={location} onChangeText={setLocation} />
+      <KeyboardAvoidingView
+        style={styles.keyboard}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.form}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          automaticallyAdjustKeyboardInsets
+          nestedScrollEnabled
+          scrollEnabled
+          bounces
+          alwaysBounceVertical
+          showsVerticalScrollIndicator
+          contentInsetAdjustmentBehavior="automatic"
+          overScrollMode="always"
+        >
+          <Text style={styles.sectionLabel}>Ağaç Bilgileri</Text>
+          <FormInput label="Ağaç Adı *" placeholder="örn. Beyaz Meşe" value={name} onChangeText={setName} />
+          <FormInput label="Tür *" placeholder="örn. Quercus alba" value={species} onChangeText={setSpecies} />
+          <FormInput label="Konum Açıklaması *" placeholder="örn. Merkez Avlu" value={location} onChangeText={setLocation} />
 
-        <Text style={styles.sectionLabel}>GPS Coordinates</Text>
+        <Text style={styles.sectionLabel}>Ağaç Fotoğrafı</Text>
+        <TouchableOpacity style={styles.photoPicker} onPress={pickPhoto} activeOpacity={0.85}>
+          {photo?.uri || existingPhotoUrl ? (
+            <Image source={{ uri: photo?.uri ?? existingPhotoUrl! }} style={styles.photoPreview} />
+          ) : (
+            <View style={styles.photoPlaceholder}>
+              <Text style={styles.photoIcon}>📷</Text>
+              <Text style={styles.photoText}>Fotoğraf Seç</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+        {(photo?.uri || existingPhotoUrl) && (
+          <TouchableOpacity style={styles.changePhotoBtn} onPress={pickPhoto}>
+            <Text style={styles.changePhotoText}>Fotoğrafı Değiştir</Text>
+          </TouchableOpacity>
+        )}
+
+        <Text style={styles.sectionLabel}>GPS Koordinatları</Text>
         <View style={styles.coordRow}>
           <View style={styles.coordInput}>
-            <FormInput label="Latitude *" placeholder="40.8040" value={latitude} onChangeText={setLatitude} keyboardType="decimal-pad" />
+            <FormInput label="Enlem *" placeholder="40.8040" value={latitude} onChangeText={setLatitude} keyboardType="decimal-pad" />
           </View>
           <View style={styles.coordInput}>
-            <FormInput label="Longitude *" placeholder="29.3610" value={longitude} onChangeText={setLongitude} keyboardType="decimal-pad" />
+            <FormInput label="Boylam *" placeholder="29.3610" value={longitude} onChangeText={setLongitude} keyboardType="decimal-pad" />
           </View>
         </View>
 
         <TouchableOpacity style={styles.mapPicker} onPress={() => setShowMapModal(true)}>
-          <Text style={styles.mapPickerText}>🗺️ Pick from Map</Text>
-          <Text style={styles.mapPickerSub}>{latitude && longitude ? `Selected: ${parseFloat(latitude).toFixed(4)}, ${parseFloat(longitude).toFixed(4)}` : '(Select location manually or use picker)'}</Text>
+          <Text style={styles.mapPickerText}>🗺️ Haritadan Seç</Text>
+          <Text style={styles.mapPickerSub}>{latitude && longitude ? `Seçili: ${parseFloat(latitude).toFixed(4)}, ${parseFloat(longitude).toFixed(4)}` : '(Konumu elle girin veya haritadan seçin)'}</Text>
         </TouchableOpacity>
 
         <Modal visible={showMapModal} animationType="slide">
           <View style={styles.mapModal}>
             <View style={styles.mapModalHeader}>
-              <TouchableOpacity onPress={() => setShowMapModal(false)}><Text style={styles.mapModalClose}>Cancel</Text></TouchableOpacity>
-              <Text style={styles.mapModalTitle}>Select Location</Text>
-              <TouchableOpacity onPress={confirmMapPin}><Text style={styles.mapModalConfirm}>Confirm</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => setShowMapModal(false)}><Text style={styles.mapModalClose}>İptal</Text></TouchableOpacity>
+              <Text style={styles.mapModalTitle}>Konum Seç</Text>
+              <TouchableOpacity onPress={confirmMapPin}><Text style={styles.mapModalConfirm}>Onayla</Text></TouchableOpacity>
             </View>
             <View style={styles.mapContainer}>
               <MapboxMap
@@ -156,29 +232,30 @@ export default function AdminAddEditTreeScreen() {
           </View>
         </Modal>
 
-        <Text style={styles.sectionLabel}>Maintenance Settings</Text>
-        <FormInput label="Watering Period (days)" placeholder="3" value={wateringPeriodDays} onChangeText={setWateringPeriodDays} keyboardType="number-pad" />
+        <Text style={styles.sectionLabel}>Bakım Ayarları</Text>
+        <FormInput label="Sulama Periyodu (gün)" placeholder="3" value={wateringPeriodDays} onChangeText={setWateringPeriodDays} keyboardType="number-pad" />
 
         <View style={styles.switchRow}>
           <View>
-            <Text style={styles.switchLabel}>Natural Monument</Text>
-            <Text style={styles.switchDesc}>Is this tree considered a natural monument?</Text>
+            <Text style={styles.switchLabel}>Doğal Anıt</Text>
+            <Text style={styles.switchDesc}>Bu ağaç doğal anıt olarak kabul ediliyor mu?</Text>
           </View>
           <Switch value={isNaturalMonument} onValueChange={setIsNaturalMonument} trackColor={{ false: Colors.neutralLight, true: Colors.greenPrimary }} thumbColor={Colors.white} />
         </View>
 
-        <TouchableOpacity 
-          style={[styles.saveBtn, saveMutation.isPending && { backgroundColor: Colors.neutralMid }]} 
-          onPress={handleSave}
-          disabled={saveMutation.isPending}
-        >
-          {saveMutation.isPending ? (
-            <ActivityIndicator color={Colors.white} />
-          ) : (
-            <Text style={styles.saveBtnText}>{isEdit ? '💾 Save Changes' : '+ Add Tree'}</Text>
-          )}
-        </TouchableOpacity>
-      </ScrollView>
+          <TouchableOpacity 
+            style={[styles.saveBtn, saveMutation.isPending && { backgroundColor: Colors.neutralMid }]} 
+            onPress={handleSave}
+            disabled={saveMutation.isPending}
+          >
+            {saveMutation.isPending ? (
+              <ActivityIndicator color={Colors.white} />
+            ) : (
+              <Text style={styles.saveBtnText}>{isEdit ? '💾 Değişiklikleri Kaydet' : '+ Ağaç Ekle'}</Text>
+            )}
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -188,10 +265,35 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: Spacing.md, backgroundColor: Colors.white },
   back: { color: Colors.greenPrimary, fontSize: 16, fontWeight: '500' },
   headerTitle: { fontSize: 16, fontWeight: '700', color: Colors.neutralDark },
-  form: { padding: Spacing.md, paddingBottom: 60 },
+  keyboard: { flex: 1 },
+  scroll: { flex: 1 },
+  form: { flexGrow: 1, padding: Spacing.md, paddingBottom: 220 },
   sectionLabel: { fontSize: 13, fontWeight: '700', color: Colors.neutralMid, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: Spacing.md, marginBottom: Spacing.sm },
   coordRow: { flexDirection: 'row', gap: Spacing.sm },
   coordInput: { flex: 1 },
+  photoPicker: {
+    height: 180,
+    backgroundColor: Colors.white,
+    borderRadius: Radius.md,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: Colors.neutralLight,
+    marginBottom: Spacing.sm,
+  },
+  photoPreview: { width: '100%', height: '100%', resizeMode: 'cover' },
+  photoPlaceholder: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.greenLight,
+    borderWidth: 1,
+    borderColor: Colors.greenPrimary,
+    borderStyle: 'dashed',
+  },
+  photoIcon: { fontSize: 32, marginBottom: 8 },
+  photoText: { fontSize: 15, fontWeight: '700', color: Colors.greenDark },
+  changePhotoBtn: { alignSelf: 'flex-start', marginBottom: Spacing.sm },
+  changePhotoText: { color: Colors.greenPrimary, fontSize: 13, fontWeight: '700' },
   mapPicker: {
     height: 120,
     backgroundColor: Colors.greenLight,
