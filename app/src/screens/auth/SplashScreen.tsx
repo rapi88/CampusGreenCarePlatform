@@ -74,8 +74,8 @@ export default function SplashScreen({ navigation }: Props) {
         <View style={styles.logoCircle}>
           <Text style={styles.logoEmoji}>🌿</Text>
         </View>
-        <Text style={styles.title}>Campus Green</Text>
-        <Text style={styles.subtitle}>Care Platform</Text>
+        <Text style={styles.title}>Kampüs Yeşil</Text>
+        <Text style={styles.subtitle}>Bakım Platformu</Text>
       </Animated.View>
     </View>
   );

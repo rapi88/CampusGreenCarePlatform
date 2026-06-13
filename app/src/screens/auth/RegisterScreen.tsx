@@ -19,17 +19,17 @@ export default function RegisterScreen({ navigation }: Props) {
   const [confirm, setConfirm] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
-  const [done, setDone] = useState(false);
+  const [done, setDöne] = useState(false);
 
   const strength = passwordStrength(password);
   const strengthColor = { weak: Colors.error, fair: Colors.statusSoon, strong: Colors.greenPrimary }[strength];
 
   const validate = () => {
     const e: Record<string, string> = {};
-    if (!name.trim()) e.name = 'Full name is required';
-    if (!isGTUEmail(email)) e.email = 'Enter a valid GTU email (@gtu.edu.tr)';
-    if (!isStrongPassword(password)) e.password = 'Must be at least 8 characters, include a number and an uppercase letter';
-    if (password !== confirm) e.confirm = 'Passwords do not match';
+    if (!name.trim()) e.name = 'Ad soyad zorunludur';
+    if (!isGTUEmail(email)) e.email = 'Geçerli bir GTU e-postasi girin (@gtu.edu.tr)';
+    if (!isStrongPassword(password)) e.password = 'En az 8 karakter olmalı, bir rakam ve bir büyük harf içermelidir';
+    if (password !== confirm) e.confirm = 'Şifreler eşleşmiyor';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -39,9 +39,9 @@ export default function RegisterScreen({ navigation }: Props) {
     setLoading(true);
     try {
       await authApi.register({ name, email, password });
-      setDone(true);
+      setDöne(true);
     } catch (err: any) {
-      Alert.alert('Error', err.response?.data?.message ?? 'Registration failed.');
+      Alert.alert('Hata', err.response?.data?.message ?? 'Kayıt başarısız oldu.');
     } finally {
       setLoading(false);
     }
@@ -51,28 +51,28 @@ export default function RegisterScreen({ navigation }: Props) {
     return (
       <View style={[styles.container, styles.center]}>
         <Text style={styles.checkEmoji}>✉️</Text>
-        <Text style={styles.doneTitle}>Check your email!</Text>
+        <Text style={styles.doneTitle}>E-postanızı kontrol edin!</Text>
         <Text style={styles.doneText}>
-          We sent a verification link to your GTU email address. You can log in after verifying.
+          GTU e-posta adresinize bir doğrulama bağlantısi gönderdik. Doğruladıktan sonra giriş yapabilirsiniz.
         </Text>
         <TouchableOpacity style={styles.btn} onPress={() => navigation.navigate('Login')}>
-          <Text style={styles.btnText}>Login</Text>
+          <Text style={styles.btnText}>Giriş Yap</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
-        <Text style={styles.backText}>← Back</Text>
+        <Text style={styles.backText}>← Geri</Text>
       </TouchableOpacity>
-      <Text style={styles.title}>Create Account</Text>
-      <Text style={styles.subtitle}>Register with your GTU student account</Text>
+      <Text style={styles.title}>Hesap Oluştur</Text>
+      <Text style={styles.subtitle}>GTU öğrenci hesabınızla kayıt olun</Text>
 
-      <FormInput label="Full Name" placeholder="Your Full Name" value={name} onChangeText={setName} error={errors.name} />
-      <FormInput label="GTU Email" placeholder="name.surname@gtu.edu.tr" keyboardType="email-address" value={email} onChangeText={setEmail} error={errors.email} />
-      <FormInput label="Password" placeholder="Choose a strong password" isPassword value={password} onChangeText={setPassword} error={errors.password} />
+      <FormInput label="Ad Soyad" placeholder="Adınız Soyadınız" value={name} onChangeText={setName} error={errors.name} />
+      <FormInput label="GTU E-posta" placeholder="ad.soyad@gtu.edu.tr" keyboardType="email-address" value={email} onChangeText={setEmail} error={errors.email} />
+      <FormInput label="Şifre" placeholder="Güçlü bir şifre seçin" isPassword value={password} onChangeText={setPassword} error={errors.password} />
 
       {/* Password strength bar */}
       {password.length > 0 && (
@@ -86,20 +86,20 @@ export default function RegisterScreen({ navigation }: Props) {
               ]}
             />
           ))}
-          <Text style={[styles.strengthLabel, { color: strengthColor }]}>{strength === 'weak' ? 'Weak' : strength === 'fair' ? 'Fair' : 'Strong'}</Text>
+          <Text style={[styles.strengthLabel, { color: strengthColor }]}>{strength === 'weak' ? 'Zayif' : strength === 'fair' ? 'Orta' : 'Güçlü'}</Text>
         </View>
       )}
 
-      <FormInput label="Confirm Password" placeholder="Re-enter your password" isPassword value={confirm} onChangeText={setConfirm} error={errors.confirm} />
+      <FormInput label="Şifreyi Onayla" placeholder="Şifrenizi tekrar girin" isPassword value={confirm} onChangeText={setConfirm} error={errors.confirm} />
 
       <TouchableOpacity style={[styles.btn, loading && styles.btnDisabled]} onPress={handleRegister} disabled={loading}>
-        {loading ? <ActivityIndicator color={Colors.white} /> : <Text style={styles.btnText}>Register</Text>}
+        {loading ? <ActivityIndicator color={Colors.white} /> : <Text style={styles.btnText}>Kayıt Ol</Text>}
       </TouchableOpacity>
 
       <View style={styles.loginRow}>
-        <Text style={styles.muted}>Already have an account? </Text>
+        <Text style={styles.muted}>Zaten hesabınız var mi? </Text>
         <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-          <Text style={styles.link}>Login</Text>
+          <Text style={styles.link}>Giriş Yap</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -107,7 +107,8 @@ export default function RegisterScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flexGrow: 1, backgroundColor: Colors.neutralBg, padding: Spacing.lg },
+  scroll: { flex: 1, backgroundColor: Colors.neutralBg },
+  container: { flexGrow: 1, backgroundColor: Colors.neutralBg, padding: Spacing.lg, paddingBottom: 120 },
   center: { alignItems: 'center', justifyContent: 'center' },
   back: { marginTop: 50, marginBottom: Spacing.lg },
   backText: { color: Colors.greenPrimary, fontSize: 16, fontWeight: '500' },

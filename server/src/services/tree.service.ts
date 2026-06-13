@@ -129,6 +129,9 @@ export const treeService = {
         isAdopted: false,
         isSuggested: true,
         suggestionId: s.id,
+        rejectionReason: tree.status === 'DENIED'
+          ? s.rejectionReason || 'Sebep belirtilmedi.'
+          : s.rejectionReason,
       };
     });
 
@@ -284,25 +287,36 @@ export const treeService = {
     return this.getById(id);
   },
 
-  async deny(id: string) {
+  async deny(id: string, reason?: string) {
+    const rejectionReason = reason?.trim();
+
     await prisma.tree.update({
       where: { id },
       data: { status: 'DENIED' },
     });
+
+    await prisma.treeSuggestion.update({
+      where: { treeId: id },
+      data: { rejectionReason: rejectionReason || 'Sebep belirtilmedi.' },
+    });
+
     return { message: 'Tree suggestion denied' };
   },
 
-  async dismissSuggestion(treeId: string, userId: string) {
-    const suggestion = await prisma.treeSuggestion.findUnique({
-      where: { treeId }
+  async dismissSuggestion(id: string, userId: string) {
+    const suggestion = await prisma.treeSuggestion.findFirst({
+      where: {
+        userId,
+        OR: [{ treeId: id }, { id }],
+      },
     });
     
-    if (!suggestion || suggestion.userId !== userId) {
+    if (!suggestion) {
       throw new NotFoundError('Suggestion not found or unauthorized');
     }
 
     await prisma.treeSuggestion.update({
-      where: { treeId },
+      where: { id: suggestion.id },
       data: { dismissed: true }
     });
 

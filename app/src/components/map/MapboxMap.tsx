@@ -122,7 +122,7 @@ export default function MapboxMap({
             <View style={styles.pendingDot}>
               <Text style={styles.pendingEmoji}>📍</Text>
             </View>
-            <Text style={styles.pendingLabel}>New Tree</Text>
+            <Text style={styles.pendingLabel}>Yeni Ağaç</Text>
             <View style={styles.pendingArrow} />
           </View>
         </MarkerView>

@@ -32,10 +32,10 @@ export default function NotesScreen({ route, navigation }: Props) {
       queryClient.invalidateQueries({ queryKey: ['tree', treeId, 'notes'] });
       setNewNoteText('');
       setModalVisible(false);
-      Toast.show({ type: 'success', text1: 'Success', text2: 'Note added.' });
+      Toast.show({ type: 'success', text1: 'Başarılı', text2: 'Not eklendi.' });
     },
     onError: () => {
-      Toast.show({ type: 'error', text1: 'Error', text2: 'Failed to add note.' });
+      Toast.show({ type: 'error', text1: 'Hata', text2: 'Not eklenemedi.' });
     }
   });
 
@@ -49,8 +49,8 @@ export default function NotesScreen({ route, navigation }: Props) {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.back}>‹ Back</Text></TouchableOpacity>
-        <Text style={styles.headerTitle}>{treeName} — Notes</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()}><Text style={styles.back}>‹ Geri</Text></TouchableOpacity>
+        <Text style={styles.headerTitle}>{treeName} — Notlar</Text>
         <View style={{ width: 60 }} />
       </View>
 
@@ -62,7 +62,9 @@ export default function NotesScreen({ route, navigation }: Props) {
         <FlatList
           data={notes}
           keyExtractor={(n) => n.id}
+          style={styles.listContainer}
           contentContainerStyle={styles.list}
+          keyboardShouldPersistTaps="handled"
           renderItem={({ item }) => (
             <View style={styles.noteCard}>
               <View style={styles.noteHeader}>
@@ -76,14 +78,14 @@ export default function NotesScreen({ route, navigation }: Props) {
             </View>
           )}
           ListEmptyComponent={
-            <View style={styles.empty}><Text style={styles.emptyEmoji}>📝</Text><Text style={styles.emptyText}>No notes added yet</Text></View>
+            <View style={styles.empty}><Text style={styles.emptyEmoji}>📝</Text><Text style={styles.emptyText}>Henüz not eklenmedi</Text></View>
           }
         />
       )}
 
       {/* FAB */}
       <TouchableOpacity style={styles.fab} onPress={() => setModalVisible(true)}>
-        <Text style={styles.fabText}>+ Add Note</Text>
+        <Text style={styles.fabText}>+ Not Ekle</Text>
       </TouchableOpacity>
 
       {/* Add note modal */}
@@ -91,10 +93,10 @@ export default function NotesScreen({ route, navigation }: Props) {
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.modalOverlay}>
             <View style={styles.modalBox}>
-              <Text style={styles.modalTitle}>Add Note</Text>
+              <Text style={styles.modalTitle}>Not Ekle</Text>
               <TextInput
                 style={styles.modalInput}
-                placeholder="Add a note about the tree…"
+                placeholder="Ağaç hakkinda bir not ekleyin…"
                 value={newNoteText}
                 onChangeText={setNewNoteText}
                 multiline
@@ -104,7 +106,7 @@ export default function NotesScreen({ route, navigation }: Props) {
               />
               <View style={styles.modalBtns}>
                 <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalVisible(false)}>
-                  <Text style={styles.cancelText}>Cancel</Text>
+                  <Text style={styles.cancelText}>İptal</Text>
                 </TouchableOpacity>
                 <TouchableOpacity 
                   style={[styles.saveBtn, (!newNoteText.trim() || addNoteMutation.isPending) && styles.saveBtnDisabled]} 
@@ -114,7 +116,7 @@ export default function NotesScreen({ route, navigation }: Props) {
                   {addNoteMutation.isPending ? (
                     <ActivityIndicator color={Colors.white} />
                   ) : (
-                    <Text style={styles.saveText}>Save</Text>
+                    <Text style={styles.saveText}>Kaydet</Text>
                   )}
                 </TouchableOpacity>
               </View>
@@ -132,7 +134,8 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: Spacing.md, backgroundColor: Colors.white },
   back: { color: Colors.greenPrimary, fontSize: 16, fontWeight: '500' },
   headerTitle: { fontSize: 15, fontWeight: '600', color: Colors.neutralDark },
-  list: { padding: Spacing.md, gap: Spacing.sm, paddingBottom: 100 },
+  listContainer: { flex: 1 },
+  list: { flexGrow: 1, padding: Spacing.md, gap: Spacing.sm, paddingBottom: 140 },
   noteCard: { backgroundColor: Colors.white, borderRadius: Radius.lg, padding: Spacing.md, ...Shadow.card },
   noteHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: Spacing.sm },
   avatarCircle: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.greenLight, alignItems: 'center', justifyContent: 'center', marginRight: 10 },

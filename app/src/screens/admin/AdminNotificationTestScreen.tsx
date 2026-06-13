@@ -39,26 +39,26 @@ export default function AdminNotificationTestScreen() {
 
   const selfTestMutation = useMutation({
     mutationFn: () => debugApi.sendSelfTest(),
-    onSuccess: (res) => Toast.show({ type: 'success', text1: '✅ Sent', text2: res.data.message }),
-    onError: (e: any) => Toast.show({ type: 'error', text1: 'Failed', text2: e?.response?.data?.message ?? 'Error' }),
+    onSuccess: (res) => Toast.show({ type: 'success', text1: '✅ Gönderildi', text2: res.data.message }),
+    onError: (e: any) => Toast.show({ type: 'error', text1: 'Başarısız', text2: e?.response?.data?.message ?? 'Hata' }),
   });
 
   const reminderSelfMutation = useMutation({
     mutationFn: () => {
-      if (!selectedTree) throw new Error('Select a tree first');
+      if (!selectedTree) throw new Error('Once bir ağaç seçin');
       return debugApi.sendWateringReminder(selectedTree.id, true);
     },
-    onSuccess: (res) => Toast.show({ type: 'success', text1: '💧 Sent', text2: res.data.message }),
-    onError: (e: any) => Toast.show({ type: 'error', text1: 'Failed', text2: e?.response?.data?.message ?? 'Select a tree first' }),
+    onSuccess: (res) => Toast.show({ type: 'success', text1: '💧 Gönderildi', text2: res.data.message }),
+    onError: (e: any) => Toast.show({ type: 'error', text1: 'Başarısız', text2: e?.response?.data?.message ?? 'Once bir ağaç seçin' }),
   });
 
   const reminderAdoptersMutation = useMutation({
     mutationFn: () => {
-      if (!selectedTree) throw new Error('Select a tree first');
+      if (!selectedTree) throw new Error('Once bir ağaç seçin');
       return debugApi.sendWateringReminder(selectedTree.id, false);
     },
-    onSuccess: (res) => Toast.show({ type: 'success', text1: '💧 Sent to Adopters', text2: res.data.message }),
-    onError: (e: any) => Toast.show({ type: 'error', text1: 'Failed', text2: e?.response?.data?.message ?? 'Select a tree first' }),
+    onSuccess: (res) => Toast.show({ type: 'success', text1: '💧 Sahiplenenlere Gönderildi', text2: res.data.message }),
+    onError: (e: any) => Toast.show({ type: 'error', text1: 'Başarısız', text2: e?.response?.data?.message ?? 'Once bir ağaç seçin' }),
   });
 
   const broadcastMutation = useMutation({
@@ -68,15 +68,15 @@ export default function AdminNotificationTestScreen() {
       setLastReceiptIds(d.receiptIds ?? []);
       setReceiptResult(null);
       const type = d.rejected > 0 && d.accepted === 0 ? 'error' : 'success';
-      Toast.show({ type, text1: '📢 Broadcast Result', text2: d.message });
+      Toast.show({ type, text1: '📢 Toplu Gönderim Sonucu', text2: d.message });
     },
-    onError: (e: any) => Toast.show({ type: 'error', text1: 'Failed', text2: e?.response?.data?.message ?? 'Error' }),
+    onError: (e: any) => Toast.show({ type: 'error', text1: 'Başarısız', text2: e?.response?.data?.message ?? 'Hata' }),
   });
 
   const cronMutation = useMutation({
     mutationFn: () => debugApi.triggerCron(),
-    onSuccess: (res) => Toast.show({ type: 'success', text1: '🔄 Cron Triggered', text2: res.data.message }),
-    onError: (e: any) => Toast.show({ type: 'error', text1: 'Failed', text2: e?.response?.data?.message ?? 'Error' }),
+    onSuccess: (res) => Toast.show({ type: 'success', text1: '🔄 Cron Çalıştırildi', text2: res.data.message }),
+    onError: (e: any) => Toast.show({ type: 'error', text1: 'Başarısız', text2: e?.response?.data?.message ?? 'Hata' }),
   });
 
   const anyPending = selfTestMutation.isPending || reminderSelfMutation.isPending ||
@@ -90,7 +90,7 @@ export default function AdminNotificationTestScreen() {
       const res = await debugApi.checkReceipts(lastReceiptIds);
       setReceiptResult(res.data);
     } catch (e: any) {
-      Toast.show({ type: 'error', text1: 'Receipt check failed', text2: e?.response?.data?.message ?? 'Error' });
+      Toast.show({ type: 'error', text1: 'Teslimat kontrolu başarısız', text2: e?.response?.data?.message ?? 'Hata' });
     } finally {
       setReceiptPending(false);
     }
@@ -101,16 +101,16 @@ export default function AdminNotificationTestScreen() {
     try {
       const { status } = await Notifications.requestPermissionsAsync();
       if (status !== 'granted') {
-        Toast.show({ type: 'error', text1: 'Permission denied', text2: 'Allow notifications in Settings.' });
+        Toast.show({ type: 'error', text1: 'İzin reddedildi', text2: 'Ayarlardan bildirimlere izin verin.' });
         return;
       }
       await Notifications.scheduleNotificationAsync({
         content: { title, body, data: data ?? {}, sound: true },
         trigger: null, // fire immediately
       });
-      Toast.show({ type: 'success', text1: '✅ Local notification sent', text2: 'Check your notification banner.' });
+      Toast.show({ type: 'success', text1: '✅ Yerel bildirim gönderildi', text2: 'Bildirim bandinizi kontrol edin.' });
     } catch (e: any) {
-      Toast.show({ type: 'error', text1: 'Failed', text2: e?.message ?? 'Error' });
+      Toast.show({ type: 'error', text1: 'Başarısız', text2: e?.message ?? 'Hata' });
     } finally {
       setLocalPending(false);
     }
@@ -120,19 +120,19 @@ export default function AdminNotificationTestScreen() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.back}>‹ Back</Text>
+          <Text style={styles.back}>‹ Geri</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>🔔 Notification Test Center</Text>
+        <Text style={styles.headerTitle}>🔔 Bildirim Test Merkezi</Text>
         <View style={{ width: 60 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         {/* Token Status Card */}
         <View style={styles.statusCard}>
           <View style={styles.statusRow}>
-            <Text style={styles.statusLabel}>Push Token Infrastructure</Text>
+            <Text style={styles.statusLabel}>Push Token Altyapisi</Text>
             <TouchableOpacity onPress={() => refetchStatus()}>
-              <Text style={styles.refreshText}>↻ Refresh</Text>
+              <Text style={styles.refreshText}>↻ Yenile</Text>
             </TouchableOpacity>
           </View>
           {statusLoading ? (
@@ -141,24 +141,24 @@ export default function AdminNotificationTestScreen() {
             <View style={styles.statusGrid}>
               <View style={styles.statusItem}>
                 <Text style={styles.statusValue}>{status.registered}</Text>
-                <Text style={styles.statusSub}>Tokens Registered</Text>
+                <Text style={styles.statusSub}>Kayıtli Token</Text>
               </View>
               <View style={styles.statusItem}>
                 <Text style={styles.statusValue}>{status.unregistered}</Text>
-                <Text style={styles.statusSub}>No Token</Text>
+                <Text style={styles.statusSub}>Token Yok</Text>
               </View>
               <View style={styles.statusItem}>
                 <Text style={[styles.statusValue, { color: status.adminTokenRegistered ? Colors.greenPrimary : Colors.error }]}>
                   {status.adminTokenRegistered ? '✅' : '❌'}
                 </Text>
-                <Text style={styles.statusSub}>Your Token</Text>
+                <Text style={styles.statusSub}>Sizin Tokeniniz</Text>
               </View>
             </View>
           ) : null}
           {status && !status.adminTokenRegistered && (
             <View style={styles.warningBox}>
               <Text style={styles.warningText}>
-                ⚠️ Your device has no registered push token. Restart the app and allow notification permissions.
+                ⚠️ Cihazınızda kayıtlı push token yok. Uygulamayı yeniden başlatın ve bildirim izinlerine onay verin.
               </Text>
             </View>
           )}
@@ -167,21 +167,21 @@ export default function AdminNotificationTestScreen() {
         {/* Simulator / Local notification section — works without projectId */}
         {Platform.OS !== 'web' && (
           <View style={[styles.section, styles.sectionSimulator]}>
-            <Text style={styles.sectionTitle}>📱 Local Notification Test</Text>
+            <Text style={styles.sectionTitle}>📱 Yerel Bildirim Testi</Text>
             <Text style={styles.sectionDesc}>
-              Works in the simulator and on real devices without any Expo project ID or push token. The notification is delivered directly to this device.
+              Simulator ve gerçek cihazlarda Expo project ID veya push token olmadan çalışır. Bildirim dogrudan bu cihaza iletilir.
             </Text>
             <ScaleButton
               style={[styles.actionBtn, anyPending && styles.btnDisabled]}
-              onPress={() => sendLocalNotification('🧪 Test Notification', 'Local notifications are working correctly!', { type: 'local_test' })}
+              onPress={() => sendLocalNotification('🧪 Test Bildirimi', 'Yerel bildirimler dogru calisiyor!', { type: 'local_test' })}
               disabled={anyPending}
             >
               {localPending
                 ? <ActivityIndicator color={Colors.white} />
-                : <Text style={styles.actionBtnText}>📲 Send Local Test Notification</Text>}
+                : <Text style={styles.actionBtnText}>📲 Yerel Test Bildirimi Gönder</Text>}
             </ScaleButton>
             <ScaleButton
-              style={[styles.actionBtn, styles.actionBtnSecondary, anyPending && styles.btnDisabled]}
+              style={[styles.actionBtn, styles.actionBtnSeçondary, anyPending && styles.btnDisabled]}
               onPress={() => sendLocalNotification(
                 '💧 Sulama Zamanı!',
                 `${selectedTree ? selectedTree.name : 'Test Ağacı'} ağacının sulanma zamanı geldi! 🌳`,
@@ -192,14 +192,14 @@ export default function AdminNotificationTestScreen() {
               {localPending
                 ? <ActivityIndicator color={Colors.greenPrimary} />
                 : <Text style={[styles.actionBtnText, { color: Colors.greenPrimary }]}>
-                    💧 Simulate Watering Reminder{selectedTree ? ` (${selectedTree.name})` : ''}
+                    💧 Sulama Hatırlatıcısı Simüle Et{selectedTree ? ` (${selectedTree.name})` : ''}
                   </Text>}
             </ScaleButton>
             <View style={styles.simulatorNote}>
               <Text style={styles.simulatorNoteText}>
-                ℹ️ To enable remote push notifications, run:{'\n'}
+                ℹ️ Uzaktan push bildirimlerini etkinleştirmek için şunu çalıştırin:{'\n'}
                 <Text style={styles.code}>npx eas init</Text>
-                {'\n'}then add the printed UUID to EXPO_PROJECT_ID in app/.env and rebuild.
+                {'\n'}ardindan yazdirilan UUID'yi app/.env içindeki EXPO_PROJECT_ID alanina ekleyip yeniden build alın.
               </Text>
             </View>
           </View>
@@ -207,8 +207,8 @@ export default function AdminNotificationTestScreen() {
 
         {/* Section 1: Self Test */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>1️⃣ Generic Push Test</Text>
-          <Text style={styles.sectionDesc}>Verify the entire push pipeline by sending a test notification to your own device.</Text>
+          <Text style={styles.sectionTitle}>1️⃣ Genel Push Testi</Text>
+          <Text style={styles.sectionDesc}>Kendi cihazınıza test bildirimi göndererek tüm push akışını doğrulayın.</Text>
           <ScaleButton
             style={[styles.actionBtn, selfTestMutation.isPending && styles.btnDisabled]}
             onPress={() => selfTestMutation.mutate()}
@@ -216,14 +216,14 @@ export default function AdminNotificationTestScreen() {
           >
             {selfTestMutation.isPending
               ? <ActivityIndicator color={Colors.white} />
-              : <Text style={styles.actionBtnText}>📨 Send Test Push to My Device</Text>}
+              : <Text style={styles.actionBtnText}>📨 Cihazima Test Push Gönder</Text>}
           </ScaleButton>
         </View>
 
         {/* Section 2: Watering Reminder */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>2️⃣ Watering Reminder</Text>
-          <Text style={styles.sectionDesc}>Simulate the watering reminder notification for a specific tree.</Text>
+          <Text style={styles.sectionTitle}>2️⃣ Sulama Hatırlatıcısı</Text>
+          <Text style={styles.sectionDesc}>Belirli bir ağaç için sulama hatırlatıcısi bildirimini simüle edin.</Text>
 
           {/* Tree picker */}
           <TouchableOpacity
@@ -231,7 +231,7 @@ export default function AdminNotificationTestScreen() {
             onPress={() => setShowTreePicker(!showTreePicker)}
           >
             <Text style={styles.treePickerText}>
-              {selectedTree ? `🌳 ${selectedTree.name}` : 'Tap to select a tree →'}
+              {selectedTree ? `🌳 ${selectedTree.name}` : 'Ağaç seçmek için dokunun →'}
             </Text>
           </TouchableOpacity>
 
@@ -255,7 +255,7 @@ export default function AdminNotificationTestScreen() {
               )}
               ListEmptyComponent={
                 <View style={{ padding: Spacing.md }}>
-                  <Text style={{ color: Colors.neutralMid, textAlign: 'center' }}>No trees found</Text>
+                  <Text style={{ color: Colors.neutralMid, textAlign: 'center' }}>Ağaç bulunamadı</Text>
                 </View>
               }
             />
@@ -268,24 +268,24 @@ export default function AdminNotificationTestScreen() {
           >
             {reminderSelfMutation.isPending
               ? <ActivityIndicator color={Colors.white} />
-              : <Text style={styles.actionBtnText}>💧 Send Reminder to My Device</Text>}
+              : <Text style={styles.actionBtnText}>💧 Hatırlatıcıyı Cihazima Gönder</Text>}
           </ScaleButton>
 
           <ScaleButton
-            style={[styles.actionBtn, styles.actionBtnSecondary, (!selectedTree || anyPending) && styles.btnDisabled]}
+            style={[styles.actionBtn, styles.actionBtnSeçondary, (!selectedTree || anyPending) && styles.btnDisabled]}
             onPress={() => reminderAdoptersMutation.mutate()}
             disabled={!selectedTree || anyPending}
           >
             {reminderAdoptersMutation.isPending
               ? <ActivityIndicator color={Colors.greenPrimary} />
-              : <Text style={[styles.actionBtnText, { color: Colors.greenPrimary }]}>💧 Send to All Tree Adopters</Text>}
+              : <Text style={[styles.actionBtnText, { color: Colors.greenPrimary }]}>💧 Ağacı Sahiplenen Herkese Gönder</Text>}
           </ScaleButton>
         </View>
 
         {/* Section 3: Broadcast */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>3️⃣ Broadcast to All Users</Text>
-          <Text style={styles.sectionDesc}>Send a test broadcast notification to every user who has a registered push token.</Text>
+          <Text style={styles.sectionTitle}>3️⃣ Tüm Kullanıcılara Toplu Gönderim</Text>
+          <Text style={styles.sectionDesc}>Kayıtli push tokeni olan her kullanıcıya test bildirimi gönderin.</Text>
           <ScaleButton
             style={[styles.actionBtn, styles.actionBtnWarning, anyPending && styles.btnDisabled]}
             onPress={() => broadcastMutation.mutate()}
@@ -293,7 +293,7 @@ export default function AdminNotificationTestScreen() {
           >
             {broadcastMutation.isPending
               ? <ActivityIndicator color={Colors.white} />
-              : <Text style={styles.actionBtnText}>📢 Broadcast Test to All Users</Text>}
+              : <Text style={styles.actionBtnText}>📢 Tüm Kullanıcılara Test Gönder</Text>}
           </ScaleButton>
 
           {/* Show broadcast result details */}
@@ -326,7 +326,7 @@ export default function AdminNotificationTestScreen() {
             >
               {receiptPending
                 ? <ActivityIndicator color={Colors.white} />
-                : <Text style={styles.actionBtnText}>🔍 Check Delivery Receipts (~30s after send)</Text>}
+                : <Text style={styles.actionBtnText}>🔍 Teslimat Kayıtlarini Kontrol Et (gönderimden ~30 sn sonra)</Text>}
             </ScaleButton>
           )}
 
@@ -334,11 +334,11 @@ export default function AdminNotificationTestScreen() {
           {receiptResult && (
             <View style={styles.resultBox}>
               <View style={styles.resultRow}>
-                <Text style={styles.resultKey}>APNs Delivered</Text>
+                <Text style={styles.resultKey}>APNs Teslim Edildi</Text>
                 <Text style={[styles.resultVal, { color: Colors.greenPrimary }]}>{receiptResult.delivered}</Text>
               </View>
               <View style={styles.resultRow}>
-                <Text style={styles.resultKey}>APNs Failed</Text>
+                <Text style={styles.resultKey}>APNs Başarısız</Text>
                 <Text style={[styles.resultVal, receiptResult.failed > 0 && { color: Colors.error }]}>{receiptResult.failed}</Text>
               </View>
               {(receiptResult.errors ?? []).map((e: any, i: number) => (
@@ -352,9 +352,9 @@ export default function AdminNotificationTestScreen() {
 
         {/* Section 4: Trigger Cron */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>4️⃣ Trigger Daily Cron Job</Text>
+          <Text style={styles.sectionTitle}>4️⃣ Günluk Cron Gorevini Çalıştır</Text>
           <Text style={styles.sectionDesc}>
-            Manually run the scheduler that checks all overdue trees and sends watering reminders to their adopters. Normally runs daily at 08:00.
+            Geciken tüm ağaçlari kontrol edip sahiplenenlere sulama hatırlatıcısi gönderen zamanlayıcıyı elle çalıştırin. Normalde her gün 08:00'de çalışır.
           </Text>
           <ScaleButton
             style={[styles.actionBtn, styles.actionBtnNeutral, anyPending && styles.btnDisabled]}
@@ -363,13 +363,13 @@ export default function AdminNotificationTestScreen() {
           >
             {cronMutation.isPending
               ? <ActivityIndicator color={Colors.white} />
-              : <Text style={styles.actionBtnText}>🔄 Run Daily Cron Now</Text>}
+              : <Text style={styles.actionBtnText}>🔄 Günluk Cron'u Simdi Çalıştır</Text>}
           </ScaleButton>
         </View>
 
         <View style={styles.noteBox}>
           <Text style={styles.noteText}>
-            ℹ️ This panel is only visible when EXPO_PUBLIC_NOTIFICATION_DEBUG=true in the app environment. Disable it before production release.
+            ℹ️ Bu panel yalnızca uygulama ortamında EXPO_PUBLIC_NOTIFICATION_DEBUG=true iken görünür. Production yayından önce devre dışı bırakın.
           </Text>
         </View>
       </ScrollView>
@@ -379,13 +379,14 @@ export default function AdminNotificationTestScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.neutralBg },
+  scroll: { flex: 1 },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     padding: Spacing.md, backgroundColor: Colors.white,
   },
   back: { color: Colors.greenPrimary, fontSize: 16, fontWeight: '500' },
   headerTitle: { fontSize: 15, fontWeight: '700', color: Colors.neutralDark },
-  content: { padding: Spacing.md, gap: Spacing.md, paddingBottom: 60 },
+  content: { flexGrow: 1, padding: Spacing.md, gap: Spacing.md, paddingBottom: 120 },
 
   // Status card
   statusCard: {
@@ -417,7 +418,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.greenPrimary, borderRadius: Radius.md,
     height: 50, alignItems: 'center', justifyContent: 'center',
   },
-  actionBtnSecondary: {
+  actionBtnSeçondary: {
     backgroundColor: Colors.white, borderWidth: 2, borderColor: Colors.greenPrimary,
   },
   actionBtnWarning: { backgroundColor: '#E53935' },

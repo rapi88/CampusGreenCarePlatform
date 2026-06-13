@@ -7,16 +7,16 @@ import { TreeStatus } from '../../api/trees.api';
 type StatusType = 'watered' | 'needs_water' | 'due_soon' | 'Healthy' | 'Sick' | 'Critical' | TreeStatus;
 
 const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string }> = {
-  watered: { label: 'Watered', bg: Colors.greenLight, color: Colors.greenDark },
-  needs_water: { label: 'Needs Water', bg: '#FFEBEE', color: Colors.statusDue },
-  due_soon: { label: 'Due Soon', bg: '#FFF3E0', color: Colors.statusSoon },
-  Healthy: { label: 'Healthy', bg: Colors.greenLight, color: Colors.greenDark },
-  Sick: { label: 'Sick', bg: '#FFF3E0', color: Colors.statusSoon },
-  Critical: { label: 'Critical', bg: '#FFEBEE', color: Colors.statusDue },
-  ACTIVE: { label: 'Active', bg: Colors.greenLight, color: Colors.greenDark },
-  PENDING: { label: 'Pending', bg: '#FFF3E0', color: Colors.statusSoon },
-  DENIED: { label: 'Denied', bg: '#FFEBEE', color: Colors.statusDue },
-  REMOVED: { label: 'Removed', bg: '#E0E0E0', color: Colors.neutralDark },
+  watered: { label: 'Sulandı', bg: Colors.greenLight, color: Colors.greenDark },
+  needs_water: { label: 'Su Gerekli', bg: '#FFEBEE', color: Colors.statusDue },
+  due_soon: { label: 'Yakında', bg: '#FFF3E0', color: Colors.statusSoon },
+  Healthy: { label: 'Sağlıklı', bg: Colors.greenLight, color: Colors.greenDark },
+  Sick: { label: 'Hasta', bg: '#FFF3E0', color: Colors.statusSoon },
+  Critical: { label: 'Kritik', bg: '#FFEBEE', color: Colors.statusDue },
+  ACTIVE: { label: 'Aktif', bg: Colors.greenLight, color: Colors.greenDark },
+  PENDING: { label: 'Beklemede', bg: '#FFF3E0', color: Colors.statusSoon },
+  DENIED: { label: 'Reddedildi', bg: '#FFEBEE', color: Colors.statusDue },
+  REMOVED: { label: 'Kaldirildi', bg: '#E0E0E0', color: Colors.neutralDark },
 };
 
 interface StatusChipProps {

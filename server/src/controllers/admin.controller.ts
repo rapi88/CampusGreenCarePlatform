@@ -62,7 +62,8 @@ export const adminController = {
   async rejectSuggestion(req: Request, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;
-      const result = await treeService.deny(id);
+      const { reason } = req.body;
+      const result = await treeService.deny(id, reason);
       res.json(result);
     } catch (error) {
       next(error);

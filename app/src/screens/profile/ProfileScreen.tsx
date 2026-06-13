@@ -12,9 +12,9 @@ import { useAuthStore } from '../../store/auth.store';
 import { treesApi } from '../../api/trees.api';
 
 const MENU_ITEMS = [
-  { icon: '✏️', label: 'Edit Profile', screen: 'EditProfile' },
-  { icon: '🔔', label: 'Notification Settings', screen: 'NotificationSettings' },
-  { icon: '🏆', label: 'Leaderboard', screen: 'Leaderboard' },
+  { icon: '✏️', label: 'Profili Düzenle', screen: 'EditProfile' },
+  { icon: '🔔', label: 'Bildirim Ayarları', screen: 'NotificationSettings' },
+  { icon: '🏆', label: 'Liderlik Tablosu', screen: 'Leaderboard' },
 ];
 
 export default function ProfileScreen() {
@@ -30,29 +30,29 @@ export default function ProfileScreen() {
 
   const handleLogout = async () => {
     if (Platform.OS === 'web') {
-      const confirm = window.confirm('Are you sure you want to log out?');
+      const confirm = window.confirm('Çıkış yapmak istediğinize emin misiniz?');
       if (confirm) {
         await AsyncStorage.removeItem('token');
         clearAuth();
       }
     } else {
-      Alert.alert('Logout', 'Are you sure you want to log out?', [
-        { text: 'Cancel', style: 'cancel' },
+      Alert.alert('Çıkış', 'Çıkış yapmak istediğinize emin misiniz?', [
+        { text: 'İptal', style: 'cancel' },
         {
-          text: 'Logout', style: 'destructive',
+          text: 'Çıkış Yap', style: 'destructive',
           onPress: async () => { await AsyncStorage.removeItem('token'); clearAuth(); }
         },
       ]);
     }
   };
 
-  const displayName = user?.name ?? 'User';
+  const displayName = user?.name ?? 'Kullanıcı';
   const displayEmail = user?.email ?? 'user@gtu.edu.tr';
   const initial = displayName.charAt(0).toUpperCase();
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
         {/* Avatar & name */}
         <View style={styles.avatarSection}>
           <TouchableOpacity onPress={() => navigation.navigate('EditProfile')} style={styles.avatarWrapper}>
@@ -75,17 +75,17 @@ export default function ProfileScreen() {
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{adoptedTreesCount}</Text>
-            <Text style={styles.statLabel}>Adopted Trees</Text>
+            <Text style={styles.statLabel}>Sahiplenilen Ağaçlar</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{user?.totalWaterings ?? 0}</Text>
-            <Text style={styles.statLabel}>Waterings Done</Text>
+            <Text style={styles.statLabel}>Yapılan Sulamalar</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{user?.points ?? 0} 🏆</Text>
-            <Text style={styles.statLabel}>Points</Text>
+            <Text style={styles.statLabel}>Puan</Text>
           </View>
         </View>
 
@@ -106,7 +106,7 @@ export default function ProfileScreen() {
 
         {/* Logout */}
         <ScaleButton style={styles.logoutBtn} onPress={handleLogout}>
-          <Text style={styles.logoutText}>🚪 Logout</Text>
+          <Text style={styles.logoutText}>🚪 Çıkış Yap</Text>
         </ScaleButton>
       </ScrollView>
     </SafeAreaView>
@@ -115,7 +115,8 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.neutralBg },
-  content: { padding: Spacing.md },
+  scroll: { flex: 1 },
+  content: { flexGrow: 1, padding: Spacing.md, paddingBottom: 120 },
   avatarSection: { alignItems: 'center', paddingVertical: Spacing.xl },
   avatarWrapper: { position: 'relative', marginBottom: 12 },
   avatarImage: { width: 88, height: 88, borderRadius: 44 },

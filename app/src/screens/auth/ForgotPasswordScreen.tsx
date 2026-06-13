@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, ScrollView } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Colors } from '../../theme/colors';
 import { Spacing, Radius } from '../../theme/spacing';
@@ -18,7 +18,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
 
   const handleReset = async () => {
     if (!isGTUEmail(email)) {
-      setEmailError('Enter a valid GTU email');
+      setEmailError('Geçerli bir GTU e-postasi girin');
       return;
     }
     setEmailError('');
@@ -27,29 +27,29 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
       await authApi.forgotPassword(email);
       setSent(true);
     } catch {
-      Alert.alert('Error', 'Failed to send password reset request.');
+      Alert.alert('Hata', 'Şifre sifirlama istegi gönderilemedi.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.scroll} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
-        <Text style={styles.backText}>← Back</Text>
+        <Text style={styles.backText}>← Geri</Text>
       </TouchableOpacity>
 
       <View style={styles.content}>
         <Text style={styles.icon}>🔐</Text>
-        <Text style={styles.title}>Forgot Password</Text>
+        <Text style={styles.title}>Şifremi Unuttüm</Text>
         <Text style={styles.desc}>
-          Enter your GTU email address, we will send you a password reset link.
+          GTU e-posta adresinizi girin, size şifre sifirlama bağlantısi gönderelim.
         </Text>
 
         {!sent ? (
           <>
             <FormInput
-              label="GTU Email"
+              label="GTU E-posta"
               placeholder="name.surname@gtu.edu.tr"
               keyboardType="email-address"
               value={email}
@@ -64,7 +64,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
               {loading ? (
                 <ActivityIndicator color={Colors.white} />
               ) : (
-                <Text style={styles.btnText}>Reset Password</Text>
+                <Text style={styles.btnText}>Şifreyi Sifirla</Text>
               )}
             </TouchableOpacity>
           </>
@@ -72,20 +72,21 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
           <View style={styles.successBox}>
             <Text style={styles.successEmoji}>✅</Text>
             <Text style={styles.successText}>
-              Link sent! Check your inbox.
+              Bağlantı gönderildi! Gelen kutunuzu kontrol edin.
             </Text>
             <TouchableOpacity style={styles.btn} onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.btnText}>Login</Text>
+              <Text style={styles.btnText}>Giriş Yap</Text>
             </TouchableOpacity>
           </View>
         )}
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.neutralBg, padding: Spacing.lg },
+  scroll: { flex: 1, backgroundColor: Colors.neutralBg },
+  container: { flexGrow: 1, backgroundColor: Colors.neutralBg, padding: Spacing.lg, paddingBottom: 120 },
   back: { marginTop: 50, marginBottom: Spacing.xxl },
   backText: { color: Colors.greenPrimary, fontSize: 16, fontWeight: '500' },
   content: { flex: 1, justifyContent: 'center' },
