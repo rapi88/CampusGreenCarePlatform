@@ -1,49 +1,62 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, ScrollView } from 'react-native';
-import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Colors } from '../../theme/colors';
-import { Spacing, Radius } from '../../theme/spacing';
-import FormInput from '../../components/common/FormInput';
-import { isGTUEmail } from '../../utils/validators';
-import { authApi } from '../../api/auth.api';
-import { AuthStackParamList } from '../../navigation/AuthStack';
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+} from "react-native";
+import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { Colors } from "../../theme/colors";
+import { Spacing, Radius } from "../../theme/spacing";
+import FormInput from "../../components/common/FormInput";
+import { isGTUEmail } from "../../utils/validators";
+import { authApi } from "../../api/auth.api";
+import { AuthStackParamList } from "../../navigation/AuthStack";
 
-type Props = NativeStackScreenProps<AuthStackParamList, 'ForgotPassword'>;
+type Props = NativeStackScreenProps<AuthStackParamList, "ForgotPassword">;
 
 export default function ForgotPasswordScreen({ navigation }: Props) {
-  const [email, setEmail] = useState('');
-  const [emailError, setEmailError] = useState('');
+  const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
 
   const handleReset = async () => {
     if (!isGTUEmail(email)) {
-      setEmailError('Geçerli bir GTU e-postasi girin');
+      setEmailError("Geçerli bir GTU e-postasi girin");
       return;
     }
-    setEmailError('');
+    setEmailError("");
     setLoading(true);
     try {
       await authApi.forgotPassword(email);
       setSent(true);
     } catch {
-      Alert.alert('Hata', 'Şifre sifirlama istegi gönderilemedi.');
+      Alert.alert("Hata", "Şifre sıfırlama istegi gönderilemedi.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <ScrollView
+      style={styles.scroll}
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
+    >
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
         <Text style={styles.backText}>← Geri</Text>
       </TouchableOpacity>
 
       <View style={styles.content}>
         <Text style={styles.icon}>🔐</Text>
-        <Text style={styles.title}>Şifremi Unuttüm</Text>
+        <Text style={styles.title}>Şifremi Unuttum</Text>
         <Text style={styles.desc}>
-          GTU e-posta adresinizi girin, size şifre sifirlama bağlantısi gönderelim.
+          GTÜ e-posta adresinizi girin, size şifre sıfırlama bağlantısı
+          gönderelim.
         </Text>
 
         {!sent ? (
@@ -64,17 +77,19 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
               {loading ? (
                 <ActivityIndicator color={Colors.white} />
               ) : (
-                <Text style={styles.btnText}>Şifreyi Sifirla</Text>
+                <Text style={styles.btnText}>Şifreyi Sıfırla</Text>
               )}
             </TouchableOpacity>
           </>
         ) : (
           <View style={styles.successBox}>
-            <Text style={styles.successEmoji}>✅</Text>
             <Text style={styles.successText}>
               Bağlantı gönderildi! Gelen kutunuzu kontrol edin.
             </Text>
-            <TouchableOpacity style={styles.btn} onPress={() => navigation.navigate('Login')}>
+            <TouchableOpacity
+              style={styles.btn}
+              onPress={() => navigation.navigate("Login")}
+            >
               <Text style={styles.btnText}>Giriş Yap</Text>
             </TouchableOpacity>
           </View>
@@ -86,20 +101,47 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   scroll: { flex: 1, backgroundColor: Colors.neutralBg },
-  container: { flexGrow: 1, backgroundColor: Colors.neutralBg, padding: Spacing.lg, paddingBottom: 120 },
+  container: {
+    flexGrow: 1,
+    backgroundColor: Colors.neutralBg,
+    padding: Spacing.lg,
+    paddingBottom: 120,
+  },
   back: { marginTop: 50, marginBottom: Spacing.xxl },
-  backText: { color: Colors.greenPrimary, fontSize: 16, fontWeight: '500' },
-  content: { flex: 1, justifyContent: 'center' },
-  icon: { fontSize: 56, textAlign: 'center', marginBottom: Spacing.md },
-  title: { fontSize: 26, fontWeight: '700', color: Colors.neutralDark, textAlign: 'center', marginBottom: Spacing.sm },
-  desc: { fontSize: 14, color: Colors.neutralMid, textAlign: 'center', marginBottom: Spacing.xl, lineHeight: 20 },
+  backText: { color: Colors.greenPrimary, fontSize: 16, fontWeight: "500" },
+  content: { flex: 1, justifyContent: "center" },
+  icon: { fontSize: 56, textAlign: "center", marginBottom: Spacing.md },
+  title: {
+    fontSize: 26,
+    fontWeight: "700",
+    color: Colors.neutralDark,
+    textAlign: "center",
+    marginBottom: Spacing.sm,
+  },
+  desc: {
+    fontSize: 14,
+    color: Colors.neutralMid,
+    textAlign: "center",
+    marginBottom: Spacing.xl,
+    lineHeight: 20,
+  },
   btn: {
-    backgroundColor: Colors.greenPrimary, borderRadius: Radius.md,
-    height: 52, alignItems: 'center', justifyContent: 'center', marginTop: Spacing.md,
+    backgroundColor: Colors.greenPrimary,
+    borderRadius: Radius.md,
+    height: 52,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: Spacing.md,
   },
   btnDisabled: { opacity: 0.6 },
-  btnText: { color: Colors.white, fontSize: 16, fontWeight: '700' },
-  successBox: { alignItems: 'center' },
+  btnText: { color: Colors.white, fontSize: 16, fontWeight: "700" },
+  successBox: { alignItems: "center" },
   successEmoji: { fontSize: 48, marginBottom: Spacing.md },
-  successText: { fontSize: 15, color: Colors.neutralMid, textAlign: 'center', marginBottom: Spacing.lg, lineHeight: 22 },
+  successText: {
+    fontSize: 15,
+    color: Colors.neutralMid,
+    textAlign: "center",
+    marginBottom: Spacing.lg,
+    lineHeight: 22,
+  },
 });

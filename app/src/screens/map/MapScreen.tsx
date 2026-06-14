@@ -1,56 +1,113 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from "react";
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  TextInput, FlatList, Dimensions,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import Toast from 'react-native-toast-message';
-import { Colors } from '../../theme/colors';
-import { Spacing, Radius, Shadow } from '../../theme/spacing';
-import StatusChip from '../../components/common/StatusChip';
-import { useMapStore, TreeStatus as FrontendTreeStatus } from '../../store/map.store';
-import { useAuthStore } from '../../store/auth.store';
-import { formatDistance, computeHydrationStatus } from '../../utils/formatters';
-import MapboxMap from '../../components/map/MapboxMap';
-import AddTreeModal from '../../components/map/AddTreeModal';
-import { treesApi, Tree } from '../../api/trees.api';
-import { adminApi } from '../../api/admin.api';
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  TextInput,
+  FlatList,
+  Dimensions,
+  Image,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import Toast from "react-native-toast-message";
+import * as Location from "expo-location";
+import { Colors } from "../../theme/colors";
+import { Spacing, Radius, Shadow } from "../../theme/spacing";
+import StatusChip from "../../components/common/StatusChip";
+import {
+  useMapStore,
+  TreeStatus as FrontendTreeStatus,
+} from "../../store/map.store";
+import { useAuthStore } from "../../store/auth.store";
+import { formatDistance, computeHydrationStatus } from "../../utils/formatters";
+import { haversineDistance } from "../../utils/geo";
+import MapboxMap from "../../components/map/MapboxMap";
+import AddTreeModal from "../../components/map/AddTreeModal";
+import { treesApi, Tree } from "../../api/trees.api";
+import { adminApi } from "../../api/admin.api";
 
 const INITIAL_CENTER: [number, number] = [29.361, 40.804]; // [lng, lat]
 const INITIAL_ZOOM = 15;
 
 const USE_NEW_MAP_LIMITS = false; // Flag to toggle zoom limits and bounding box
 const CAMPUS_BOUNDS = {
-  ne: [29.380, 40.820] as [number, number],
-  sw: [29.340, 40.790] as [number, number],
+  ne: [29.38, 40.82] as [number, number],
+  sw: [29.34, 40.79] as [number, number],
 };
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 
 export default function MapScreen() {
   const navigation = useNavigation<any>();
   const queryClient = useQueryClient();
   const {
-    viewMode, setViewMode,
-    filterStatus, setFilterStatus,
-    selectedTreeId, setSelectedTree,
-    isAddingTree, setIsAddingTree,
-    isSuggestingTree, setIsSuggestingTree,
-    pendingPin, setPendingPin,
+    viewMode,
+    setViewMode,
+    filterStatus,
+    setFilterStatus,
+    selectedTreeId,
+    setSelectedTree,
+    isAddingTree,
+    setIsAddingTree,
+    isSuggestingTree,
+    setIsSuggestingTree,
+    pendingPin,
+    setPendingPin,
   } = useMapStore();
   const user = useAuthStore((s) => s.user);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
+  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
 
-  const isAdmin = user?.role === 'ADMIN';
+  const isAdmin = user?.role === "ADMIN";
+
+  const loadUserLocation = useCallback(async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") return;
+
+      let loc = null;
+      try {
+        loc = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+      } catch {
+        loc = await Location.getLastKnownPositionAsync();
+      }
+
+      if (loc) {
+        setUserCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+      }
+    } catch {
+      // Distance labels stay hidden until a location is available.
+    }
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    if (isMounted) loadUserLocation();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [loadUserLocation]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadUserLocation();
+    }, [loadUserLocation]),
+  );
 
   // Fetch trees (only ACTIVE trees for the map)
   const { data: activeTrees = [] } = useQuery({
-    queryKey: ['trees'],
+    queryKey: ["trees"],
     queryFn: async () => {
-      const res = await treesApi.getAll({ status: 'ACTIVE' });
+      const res = await treesApi.getAll({ status: "ACTIVE" });
       return res.data;
     },
   });
@@ -59,63 +116,74 @@ export default function MapScreen() {
   const createTreeMutation = useMutation({
     mutationFn: (data: Partial<Tree>) => adminApi.createTree(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['trees'] });
-      Toast.show({ type: 'success', text1: 'Başarılı', text2: 'Ağaç başarıyla eklendi' });
+      queryClient.invalidateQueries({ queryKey: ["trees"] });
+      Toast.show({
+        type: "success",
+        text1: "Başarılı",
+        text2: "Ağaç başarıyla eklendi",
+      });
       setShowAddModal(false);
       setIsAddingTree(false);
       setPendingPin(null);
     },
   });
 
-  // User Suggest Tree Mutation
-  const suggestTreeMutation = useMutation({
-    mutationFn: (data: Partial<Tree>) => treesApi.suggest(data),
-    onSuccess: () => {
-      Toast.show({ type: 'success', text1: 'Başarılı', text2: 'Ağaç önerisi admin onayına gönderildi' });
-      setShowAddModal(false);
-      setIsSuggestingTree(false);
-      setPendingPin(null);
-    },
-  });
-
   // Add hydrationStatus and distanceM
-  const processedTrees = activeTrees.map(t => ({
+  const processedTrees = activeTrees.map((t) => ({
     ...t,
-    distanceM: 0,
-    hydrationStatus: computeHydrationStatus(t.lastWateredAt, t.wateringPeriodDays)
+    distanceM: userCoords
+      ? Math.round(
+          haversineDistance(
+            userCoords.lat,
+            userCoords.lng,
+            t.latitude,
+            t.longitude,
+          ),
+        )
+      : null,
+    hydrationStatus: computeHydrationStatus(
+      t.lastWateredAt,
+      t.wateringPeriodDays,
+    ),
   }));
 
   const filtered = processedTrees.filter((t) => {
-    const matchSearch = t.name.toLowerCase().includes(search.toLowerCase()) || t.location.toLowerCase().includes(search.toLowerCase());
+    const matchSearch =
+      t.name.toLowerCase().includes(search.toLowerCase()) ||
+      t.location.toLowerCase().includes(search.toLowerCase());
     const matchFilter = !filterStatus || t.hydrationStatus === filterStatus;
     return matchSearch && matchFilter;
   });
 
-  const selectedTree = filtered.find((t) => t.id === selectedTreeId) || (filtered.length > 0 ? filtered[0] : null);
+  const selectedTree =
+    filtered.find((t) => t.id === selectedTreeId) ||
+    (filtered.length > 0 ? filtered[0] : null);
 
-  const handleMarkerPress = useCallback((tree: { id: string }) => {
-    if (!isAddingTree && !isSuggestingTree) {
-      setSelectedTree(tree.id);
-    }
-  }, [isAddingTree, isSuggestingTree, setSelectedTree]);
+  const handleMarkerPress = useCallback(
+    (tree: { id: string }) => {
+      if (!isAddingTree && !isSuggestingTree) {
+        setSelectedTree(tree.id);
+      }
+    },
+    [isAddingTree, isSuggestingTree, setSelectedTree],
+  );
 
-  const handleMapClick = useCallback((coords: { lat: number; lng: number }) => {
-    if (isAddingTree || isSuggestingTree) {
-      setPendingPin(coords);
-    }
-  }, [isAddingTree, isSuggestingTree, setPendingPin]);
+  const handleMapClick = useCallback(
+    (coords: { lat: number; lng: number }) => {
+      if (isAddingTree || isSuggestingTree) {
+        setPendingPin(coords);
+      }
+    },
+    [isAddingTree, isSuggestingTree, setPendingPin],
+  );
 
   const handleToggleAddMode = () => {
     if (isAddingTree || isSuggestingTree) {
       setIsAddingTree(false);
       setIsSuggestingTree(false);
       setPendingPin(null);
-    } else {
-      if (isAdmin) {
-        setIsAddingTree(true);
-      } else {
-        setIsSuggestingTree(true);
-      }
+    } else if (isAdmin) {
+      setIsAddingTree(true);
       setSelectedTree(null);
     }
   };
@@ -130,7 +198,7 @@ export default function MapScreen() {
     name: string;
     species: string;
     location: string;
-    health: 'Healthy' | 'Sick' | 'Critical';
+    health: "Healthy" | "Sick" | "Critical";
     lat: number;
     lng: number;
   }) => {
@@ -145,8 +213,6 @@ export default function MapScreen() {
 
     if (isAddingTree) {
       createTreeMutation.mutate(payload);
-    } else if (isSuggestingTree) {
-      suggestTreeMutation.mutate(payload);
     }
   };
 
@@ -155,15 +221,20 @@ export default function MapScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Text style={styles.logoEmoji}>🌳</Text>
+          <Image source={require("../../assets/applogo1.png")} style={styles.logoImage} />
           <Text style={styles.appName}>Ağaç Takip</Text>
         </View>
-        <TouchableOpacity style={styles.viewToggle} onPress={() => setViewMode(viewMode === 'map' ? 'list' : 'map')}>
-          <Text style={styles.viewToggleText}>{viewMode === 'map' ? '☰ Liste' : '🗺️ Harita'}</Text>
+        <TouchableOpacity
+          style={styles.viewToggle}
+          onPress={() => setViewMode(viewMode === "map" ? "list" : "map")}
+        >
+          <Text style={styles.viewToggleText}>
+            {viewMode === "map" ? "☰ Liste" : "🗺️ Harita"}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -195,20 +266,32 @@ export default function MapScreen() {
 
       {/* Filter chips */}
       {!(isAddingTree || isSuggestingTree) && (
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={true} 
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={true}
           style={styles.filterScroll}
           contentContainerStyle={styles.filters}
         >
-          {[null, 'watered', 'needs_water', 'due_soon'].map((s) => (
+          {[null, "watered", "needs_water"].map((s) => (
             <TouchableOpacity
               key={String(s)}
-              style={[styles.filterChip, filterStatus === s && styles.filterChipActive]}
+              style={[
+                styles.filterChip,
+                filterStatus === s && styles.filterChipActive,
+              ]}
               onPress={() => setFilterStatus(s as any)}
             >
-              <Text style={[styles.filterText, filterStatus === s && styles.filterTextActive]}>
-                {s === null ? 'Tümu' : s === 'watered' ? '🟢 Sulandı' : s === 'needs_water' ? '🔴 Su Gerekli' : '🟠 Yakında Gerekli'}
+              <Text
+                style={[
+                  styles.filterText,
+                  filterStatus === s && styles.filterTextActive,
+                ]}
+              >
+                {s === null
+                  ? "Tümü"
+                  : s === "watered"
+                    ? "🟢 Sulandı"
+                    : "🔴 Su Gerekli"}
               </Text>
             </TouchableOpacity>
           ))}
@@ -216,7 +299,7 @@ export default function MapScreen() {
       )}
 
       {/* Map view — real Mapbox */}
-      {viewMode === 'map' && (
+      {viewMode === "map" && (
         <View style={styles.mapContainer}>
           <MapboxMap
             trees={filtered as any}
@@ -235,17 +318,28 @@ export default function MapScreen() {
           {!(isAddingTree || isSuggestingTree) && selectedTree && (
             <TouchableOpacity
               style={styles.previewCard}
-              onPress={() => navigation.navigate('TreeDetail', { treeId: selectedTree.id })}
+              onPress={() =>
+                navigation.navigate("TreeDetail", { treeId: selectedTree.id })
+              }
             >
               <View style={styles.previewLeft}>
                 <Text style={styles.previewEmoji}>🌳</Text>
               </View>
               <View style={styles.previewInfo}>
                 <Text style={styles.previewName}>{selectedTree.name}</Text>
-                <Text style={styles.previewLocation}>📍 {selectedTree.location}</Text>
+                <Text style={styles.previewLocation}>
+                  📍 {selectedTree.location}
+                </Text>
                 <View style={styles.previewRow}>
-                  <StatusChip status={selectedTree.hydrationStatus as any} size="sm" />
-                  <Text style={styles.previewDist}>{formatDistance(selectedTree.distanceM)} uzakta</Text>
+                  <StatusChip
+                    status={selectedTree.hydrationStatus as any}
+                    size="sm"
+                  />
+                  <Text style={styles.previewDist}>
+                    {selectedTree.distanceM !== null
+                      ? `${formatDistance(selectedTree.distanceM)} uzakta`
+                      : "Konum bekleniyor"}
+                  </Text>
                 </View>
               </View>
               <Text style={styles.previewArrow}>›</Text>
@@ -260,16 +354,21 @@ export default function MapScreen() {
                 <Text style={styles.confirmCoords}>
                   {pendingPin.lat.toFixed(6)}, {pendingPin.lng.toFixed(6)}
                 </Text>
-                <Text style={styles.confirmHint}>Konumu pini sürükleyerek ayarlayabilirsiniz</Text>
+                <Text style={styles.confirmHint}>
+                  Konumu pini sürükleyerek ayarlayabilirsiniz
+                </Text>
               </View>
-              <TouchableOpacity style={styles.confirmBtn} onPress={handleConfirmPin}>
+              <TouchableOpacity
+                style={styles.confirmBtn}
+                onPress={handleConfirmPin}
+              >
                 <Text style={styles.confirmBtnText}>Devam →</Text>
               </TouchableOpacity>
             </View>
           )}
 
           {/* FAB — add/suggest tree toggle */}
-          {viewMode === 'map' && (
+          {viewMode === "map" && isAdmin && (
             <TouchableOpacity
               style={[
                 styles.fab,
@@ -278,7 +377,7 @@ export default function MapScreen() {
               onPress={handleToggleAddMode}
             >
               <Text style={styles.fabText}>
-                {(isAddingTree || isSuggestingTree) ? '✕' : (isAdmin ? '＋' : '🌟')}
+                {isAddingTree || isSuggestingTree ? "✕" : isAdmin ? "＋" : "🌟"}
               </Text>
             </TouchableOpacity>
           )}
@@ -286,7 +385,7 @@ export default function MapScreen() {
       )}
 
       {/* List view */}
-      {viewMode === 'list' && (
+      {viewMode === "list" && (
         <FlatList
           data={filtered}
           keyExtractor={(t) => t.id}
@@ -296,7 +395,9 @@ export default function MapScreen() {
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.listCard}
-              onPress={() => navigation.navigate('TreeDetail', { treeId: item.id })}
+              onPress={() =>
+                navigation.navigate("TreeDetail", { treeId: item.id })
+              }
             >
               <View style={styles.listCardLeft}>
                 <Text style={styles.listEmoji}>🌳</Text>
@@ -306,7 +407,9 @@ export default function MapScreen() {
                 <Text style={styles.listLoc}>📍 {item.location}</Text>
                 <StatusChip status={item.hydrationStatus as any} size="sm" />
               </View>
-              <Text style={styles.listDist}>{formatDistance(item.distanceM)}</Text>
+              <Text style={styles.listDist}>
+                {item.distanceM !== null ? formatDistance(item.distanceM) : "—"}
+              </Text>
             </TouchableOpacity>
           )}
           ListEmptyComponent={
@@ -332,73 +435,128 @@ export default function MapScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.neutralBg },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.md, paddingVertical: Spacing.sm },
-  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  logoEmoji: { fontSize: 28 },
-  appName: { fontSize: 20, fontWeight: '700', color: Colors.neutralDark },
-  viewToggle: { backgroundColor: Colors.greenLight, paddingHorizontal: 12, paddingVertical: 6, borderRadius: Radius.full },
-  viewToggleText: { color: Colors.greenDark, fontWeight: '600', fontSize: 13 },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+  },
+  headerLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
+  logoImage: { width: 40, height: 40, resizeMode: "contain" },
+  appName: { fontSize: 20, fontWeight: "700", color: Colors.neutralDark },
+  viewToggle: {
+    backgroundColor: Colors.greenLight,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: Radius.full,
+  },
+  viewToggleText: { color: Colors.greenDark, fontWeight: "600", fontSize: 13 },
   // Add-tree banner
   addBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF8E1',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFF8E1",
     marginHorizontal: Spacing.md,
     marginBottom: Spacing.sm,
     paddingHorizontal: Spacing.md,
     paddingVertical: 10,
     borderRadius: Radius.md,
     borderWidth: 1,
-    borderColor: '#FFE082',
+    borderColor: "#FFE082",
     gap: 8,
   },
   addBannerIcon: { fontSize: 18 },
-  addBannerText: { flex: 1, fontSize: 13, color: '#F57F17', fontWeight: '600' },
+  addBannerText: { flex: 1, fontSize: 13, color: "#F57F17", fontWeight: "600" },
   // Search
   searchRow: { paddingHorizontal: Spacing.md, paddingBottom: Spacing.sm },
   searchBox: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.white,
-    borderRadius: Radius.full, paddingHorizontal: Spacing.md, height: 44, ...Shadow.card,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.white,
+    borderRadius: Radius.full,
+    paddingHorizontal: Spacing.md,
+    height: 44,
+    ...Shadow.card,
   },
   searchIcon: { fontSize: 16, marginRight: 8 },
   searchInput: { flex: 1, fontSize: 15, color: Colors.neutralDark },
   filterScroll: { flexGrow: 0, marginBottom: Spacing.sm, paddingBottom: 8 },
-  filters: { paddingHorizontal: Spacing.md, gap: 8, alignItems: 'center' },
+  filters: { paddingHorizontal: Spacing.md, gap: 8, alignItems: "center" },
   filterChip: {
-    paddingHorizontal: 14, paddingVertical: 6, borderRadius: Radius.full,
-    backgroundColor: Colors.white, borderWidth: 1.5, borderColor: Colors.neutralLight,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.white,
+    borderWidth: 1.5,
+    borderColor: Colors.neutralLight,
   },
-  filterChipActive: { backgroundColor: Colors.greenLight, borderColor: Colors.greenPrimary },
-  filterText: { fontSize: 13, color: Colors.neutralMid, fontWeight: '500' },
-  filterTextActive: { color: Colors.greenDark, fontWeight: '600' },
+  filterChipActive: {
+    backgroundColor: Colors.greenLight,
+    borderColor: Colors.greenPrimary,
+  },
+  filterText: { fontSize: 13, color: Colors.neutralMid, fontWeight: "500" },
+  filterTextActive: { color: Colors.greenDark, fontWeight: "600" },
   // Map
-  mapContainer: { flex: 1, position: 'relative' },
+  mapContainer: { flex: 1, position: "relative" },
   // Preview card
   previewCard: {
-    position: 'absolute', bottom: Spacing.md, left: Spacing.md, right: Spacing.md,
-    backgroundColor: Colors.white, borderRadius: Radius.lg, padding: Spacing.md,
-    flexDirection: 'row', alignItems: 'center', ...Shadow.modal,
+    position: "absolute",
+    bottom: Spacing.md,
+    left: Spacing.md,
+    right: Spacing.md,
+    backgroundColor: Colors.white,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
+    ...Shadow.modal,
   },
-  previewLeft: { width: 64, height: 64, backgroundColor: Colors.greenLight, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center', marginRight: Spacing.md },
+  previewLeft: {
+    width: 64,
+    height: 64,
+    backgroundColor: Colors.greenLight,
+    borderRadius: Radius.md,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: Spacing.md,
+  },
   previewEmoji: { fontSize: 32 },
   previewInfo: { flex: 1 },
-  previewName: { fontSize: 16, fontWeight: '700', color: Colors.neutralDark },
+  previewName: { fontSize: 16, fontWeight: "700", color: Colors.neutralDark },
   previewLocation: { fontSize: 12, color: Colors.neutralMid, marginBottom: 6 },
-  previewRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  previewDist: { fontSize: 12, color: Colors.greenPrimary, fontWeight: '500' },
+  previewRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  previewDist: { fontSize: 12, color: Colors.greenPrimary, fontWeight: "500" },
   previewArrow: { fontSize: 24, color: Colors.neutralLight },
   // Confirm card for pending pin
   confirmCard: {
-    position: 'absolute', bottom: Spacing.md, left: Spacing.md, right: Spacing.md,
-    backgroundColor: Colors.white, borderRadius: Radius.lg, padding: Spacing.md,
-    flexDirection: 'row', alignItems: 'center', ...Shadow.modal,
+    position: "absolute",
+    bottom: Spacing.md,
+    left: Spacing.md,
+    right: Spacing.md,
+    backgroundColor: Colors.white,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    flexDirection: "row",
+    alignItems: "center",
+    ...Shadow.modal,
     borderWidth: 2,
     borderColor: Colors.greenPrimary,
   },
   confirmInfo: { flex: 1 },
-  confirmTitle: { fontSize: 15, fontWeight: '700', color: Colors.greenDark },
-  confirmCoords: { fontSize: 12, color: Colors.neutralMid, marginTop: 2, fontFamily: 'monospace' },
-  confirmHint: { fontSize: 11, color: Colors.neutralMid, marginTop: 4, fontStyle: 'italic' },
+  confirmTitle: { fontSize: 15, fontWeight: "700", color: Colors.greenDark },
+  confirmCoords: {
+    fontSize: 12,
+    color: Colors.neutralMid,
+    marginTop: 2,
+    fontFamily: "monospace",
+  },
+  confirmHint: {
+    fontSize: 11,
+    color: Colors.neutralMid,
+    marginTop: 4,
+    fontStyle: "italic",
+  },
   confirmBtn: {
     backgroundColor: Colors.greenPrimary,
     paddingHorizontal: 20,
@@ -407,18 +565,18 @@ const styles = StyleSheet.create({
     marginLeft: Spacing.md,
     ...Shadow.card,
   },
-  confirmBtnText: { fontSize: 14, fontWeight: '700', color: Colors.white },
+  confirmBtnText: { fontSize: 14, fontWeight: "700", color: Colors.white },
   // FAB — admin add tree button
   fab: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 100,
     right: Spacing.md,
     width: 56,
     height: 56,
     borderRadius: 28,
     backgroundColor: Colors.greenPrimary,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     ...Shadow.modal,
   },
   fabCancel: {
@@ -427,23 +585,45 @@ const styles = StyleSheet.create({
   fabText: {
     fontSize: 28,
     color: Colors.white,
-    fontWeight: '300',
+    fontWeight: "300",
     lineHeight: 30,
   },
   // List
   listContainer: { flex: 1 },
-  list: { flexGrow: 1, padding: Spacing.md, gap: Spacing.sm, paddingBottom: 120 },
-  listCard: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.white,
-    borderRadius: Radius.lg, padding: Spacing.md, ...Shadow.card,
+  list: {
+    flexGrow: 1,
+    padding: Spacing.md,
+    gap: Spacing.sm,
+    paddingBottom: 120,
   },
-  listCardLeft: { width: 52, height: 52, backgroundColor: Colors.greenLight, borderRadius: Radius.md, alignItems: 'center', justifyContent: 'center', marginRight: Spacing.md },
+  listCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.white,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    ...Shadow.card,
+  },
+  listCardLeft: {
+    width: 52,
+    height: 52,
+    backgroundColor: Colors.greenLight,
+    borderRadius: Radius.md,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: Spacing.md,
+  },
   listEmoji: { fontSize: 26 },
   listInfo: { flex: 1, gap: 4 },
-  listName: { fontSize: 15, fontWeight: '600', color: Colors.neutralDark },
+  listName: { fontSize: 15, fontWeight: "600", color: Colors.neutralDark },
   listLoc: { fontSize: 12, color: Colors.neutralMid },
-  listDist: { fontSize: 12, color: Colors.greenPrimary, fontWeight: '600', marginLeft: 8 },
-  empty: { alignItems: 'center', paddingTop: 60 },
+  listDist: {
+    fontSize: 12,
+    color: Colors.greenPrimary,
+    fontWeight: "600",
+    marginLeft: 8,
+  },
+  empty: { alignItems: "center", paddingTop: 60 },
   emptyEmoji: { fontSize: 48, marginBottom: 12 },
   emptyText: { fontSize: 16, color: Colors.neutralMid },
 });

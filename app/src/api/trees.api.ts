@@ -38,6 +38,7 @@ export const treesApi = {
   getById: (id: string) => api.get<Tree>(`/trees/${id}`),
   getMyTrees: () => api.get<MyTreesResponse>('/trees/mine'),
   suggest: (data: Partial<Tree>) => api.post('/trees/suggest', data),
+  uploadTreePhoto: (id: string, formData: FormData) => api.post<Tree>(`/trees/${id}/photo`, formData),
   dismissSuggestion: (id: string) => api.put(`/trees/suggestions/${id}/dismiss`),
   adopt: (id: string) => api.post(`/trees/${id}/adopt`),
   leaveAdoption: (id: string) => api.delete(`/trees/${id}/adopt`),

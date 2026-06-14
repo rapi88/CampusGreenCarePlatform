@@ -25,6 +25,10 @@ import { useAuthStore } from "../../store/auth.store";
 
 type Props = NativeStackScreenProps<TreeStackParamList, "TreeDetail">;
 
+function formatOptionalMeasurement(value: number | null | undefined, unit: string) {
+  return value && value > 0 ? `${value} ${unit}` : "Bilinmiyor";
+}
+
 export default function TreeDetailScreen({ route, navigation }: Props) {
   const { treeId } = route.params;
   const queryClient = useQueryClient();
@@ -184,11 +188,11 @@ export default function TreeDetailScreen({ route, navigation }: Props) {
           <View style={styles.grid}>
             <View style={styles.gridCell}>
               <Text style={styles.gridLabel}>Tahmini Yaş</Text>
-              <Text style={styles.gridValue}>{tree.estimatedAge} Yıl</Text>
+              <Text style={styles.gridValue}>{formatOptionalMeasurement(tree.estimatedAge, "Yıl")}</Text>
             </View>
             <View style={styles.gridCell}>
               <Text style={styles.gridLabel}>Boy</Text>
-              <Text style={styles.gridValue}>{tree.height} Metre</Text>
+              <Text style={styles.gridValue}>{formatOptionalMeasurement(tree.height, "Metre")}</Text>
             </View>
             <View style={styles.gridCell}>
               <Text style={styles.gridLabel}>Sulama Periyodu</Text>

@@ -1,6 +1,6 @@
 // Profile screen
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Platform, Image } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal } from 'react-native';
 import ScaleButton from '../../components/common/ScaleButton';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -11,7 +11,7 @@ import { Spacing, Radius, Shadow } from '../../theme/spacing';
 import { useAuthStore } from '../../store/auth.store';
 import { treesApi } from '../../api/trees.api';
 
-const MENU_ITEMS = [
+const BASE_MENU_ITEMS = [
   { icon: '✏️', label: 'Profili Düzenle', screen: 'EditProfile' },
   { icon: '🔔', label: 'Bildirim Ayarları', screen: 'NotificationSettings' },
   { icon: '🏆', label: 'Liderlik Tablosu', screen: 'Leaderboard' },
@@ -20,6 +20,7 @@ const MENU_ITEMS = [
 export default function ProfileScreen() {
   const navigation = useNavigation<any>();
   const { user, clearAuth } = useAuthStore();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const { data: myTreesResponse } = useQuery({
     queryKey: ['my-trees'],
@@ -29,26 +30,19 @@ export default function ProfileScreen() {
   const adoptedTreesCount = myTreesResponse?.data?.adopted?.length || 0;
 
   const handleLogout = async () => {
-    if (Platform.OS === 'web') {
-      const confirm = window.confirm('Çıkış yapmak istediğinize emin misiniz?');
-      if (confirm) {
-        await AsyncStorage.removeItem('token');
-        clearAuth();
-      }
-    } else {
-      Alert.alert('Çıkış', 'Çıkış yapmak istediğinize emin misiniz?', [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Çıkış Yap', style: 'destructive',
-          onPress: async () => { await AsyncStorage.removeItem('token'); clearAuth(); }
-        },
-      ]);
-    }
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = async () => {
+    setShowLogoutModal(false);
+    await AsyncStorage.removeItem('token');
+    clearAuth();
   };
 
   const displayName = user?.name ?? 'Kullanıcı';
   const displayEmail = user?.email ?? 'user@gtu.edu.tr';
   const initial = displayName.charAt(0).toUpperCase();
+  const menuItems = BASE_MENU_ITEMS;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -91,7 +85,7 @@ export default function ProfileScreen() {
 
         {/* Menu */}
         <View style={styles.menuSection}>
-          {MENU_ITEMS.map((item) => (
+          {menuItems.map((item) => (
             <ScaleButton
               key={item.screen}
               style={styles.menuItem}
@@ -109,6 +103,31 @@ export default function ProfileScreen() {
           <Text style={styles.logoutText}>🚪 Çıkış Yap</Text>
         </ScaleButton>
       </ScrollView>
+
+      <Modal
+        visible={showLogoutModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLogoutModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.logoutModal}>
+            <View style={styles.logoutLogoWrap}>
+              <Image source={require('../../assets/applogo1.png')} style={styles.logoutLogo} />
+            </View>
+            <Text style={styles.modalTitle}>Çıkış yapılsın mı?</Text>
+            <Text style={styles.modalText}>Hesabınızdan çıkış yapmak istediğinize emin misiniz?</Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowLogoutModal(false)}>
+                <Text style={styles.cancelText}>İptal</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.confirmBtn} onPress={confirmLogout}>
+                <Text style={styles.confirmText}>Çıkış Yap</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -155,4 +174,53 @@ const styles = StyleSheet.create({
     alignItems: 'center', ...Shadow.card,
   },
   logoutText: { fontSize: 15, color: Colors.error, fontWeight: '600' },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: Colors.overlay,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Spacing.lg,
+  },
+  logoutModal: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: Colors.white,
+    borderRadius: Radius.lg,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.md,
+    alignItems: 'center',
+    ...Shadow.modal,
+  },
+  logoutLogoWrap: {
+    width: 74,
+    height: 74,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.sm,
+  },
+  logoutLogo: { width: 74, height: 74, resizeMode: 'contain' },
+  modalTitle: { fontSize: 22, fontWeight: '800', color: Colors.neutralDark, marginBottom: 8, textAlign: 'center' },
+  modalText: { fontSize: 15, color: Colors.neutralMid, textAlign: 'center', lineHeight: 22, paddingHorizontal: Spacing.sm },
+  modalActions: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.lg, width: '100%' },
+  cancelBtn: {
+    flex: 1,
+    minWidth: 0,
+    height: 48,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.neutralBg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmBtn: {
+    flex: 1,
+    minWidth: 0,
+    height: 48,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelText: { fontSize: 15, fontWeight: '700', color: Colors.neutralDark },
+  confirmText: { fontSize: 15, fontWeight: '700', color: Colors.white },
 });

@@ -14,10 +14,16 @@ export interface User {
 
 export interface LoginPayload { email: string; password: string; }
 export interface RegisterPayload { name: string; email: string; password: string; }
+export interface RegisterResponse {
+  message: string;
+  userId: string;
+  verificationEmailSent?: boolean;
+  verificationLink?: string;
+}
 
 export const authApi = {
   login: (data: LoginPayload) => api.post<{ token: string; user: User }>('/auth/login', data),
-  register: (data: RegisterPayload) => api.post('/auth/register', data),
+  register: (data: RegisterPayload) => api.post<RegisterResponse>('/auth/register', data),
   forgotPassword: (email: string) => api.post('/auth/forgot-password', { email }),
   me: () => api.get<User>('/auth/me'),
   registerPushToken: (expoPushToken: string) => api.post<{ message: string }>('/auth/push-token', { expoPushToken }),
@@ -25,4 +31,3 @@ export const authApi = {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
 };
-

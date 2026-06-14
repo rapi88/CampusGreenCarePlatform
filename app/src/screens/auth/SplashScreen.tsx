@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
+import { View, Text, StyleSheet, Animated, Platform, Image } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
@@ -71,8 +71,8 @@ export default function SplashScreen({ navigation }: Props) {
   return (
     <View style={styles.container}>
       <Animated.View style={{ transform: [{ scale }], opacity }}>
-        <View style={styles.logoCircle}>
-          <Text style={styles.logoEmoji}>🌿</Text>
+        <View style={styles.logoWrap}>
+          <Image source={require('../../assets/applogo.png')} style={styles.logoImage} />
         </View>
         <Text style={styles.title}>Kampüs Yeşil</Text>
         <Text style={styles.subtitle}>Bakım Platformu</Text>
@@ -84,21 +84,17 @@ export default function SplashScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.greenPrimary,
+    backgroundColor: '#49AD4F',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logoCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: Colors.white,
+  logoWrap: {
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
   },
-  logoEmoji: { fontSize: 52 },
+  logoImage: { width: 152, height: 152, resizeMode: 'contain' },
   title: { fontSize: 32, fontWeight: '800', color: Colors.white, textAlign: 'center' },
   subtitle: { fontSize: 18, fontWeight: '400', color: 'rgba(255,255,255,0.8)', textAlign: 'center', marginTop: 4 },
 });
