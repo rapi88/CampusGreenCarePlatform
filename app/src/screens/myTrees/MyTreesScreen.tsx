@@ -153,6 +153,12 @@ export default function MyTreesScreen() {
               Önerilen
             </Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.addTreeTab}
+            onPress={() => navigation.navigate("SuggestTree")}
+          >
+            <Text style={styles.addTreeTabText}>Ağaç Ekle+</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -276,17 +282,26 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     paddingHorizontal: Spacing.md,
     marginBottom: Spacing.sm,
-    gap: Spacing.md,
+    gap: Spacing.sm,
   },
   tab: {
     paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     borderRadius: Radius.full,
     backgroundColor: Colors.white,
   },
   activeTab: { backgroundColor: Colors.greenPrimary },
   tabText: { fontSize: 14, fontWeight: "600", color: Colors.neutralMid },
   activeTabText: { color: Colors.white },
+  addTreeTab: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.greenLight,
+    borderWidth: 1,
+    borderColor: Colors.greenPrimary,
+  },
+  addTreeTabText: { fontSize: 14, fontWeight: "700", color: Colors.greenDark },
   listContainer: { flex: 1 },
   list: { flexGrow: 1, padding: Spacing.md, gap: Spacing.sm, paddingBottom: 120 },
   card: {

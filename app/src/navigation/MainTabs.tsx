@@ -47,6 +47,7 @@ export type MainTabsParamList = {
 export type AppStackParamList = TreeStackParamList & {
   Tabs: undefined;
   // Admin sub-screens accessible from the admin tab
+  SuggestTree: undefined;
   AdminTreeList: undefined;
   AdminAddEditTree: { treeId?: string };
   AdminReports: undefined;
@@ -133,6 +134,7 @@ export default function MainTabs() {
       <AppStack.Screen name="Adoption" component={AdoptionScreen} />
       <AppStack.Screen name="Chat" component={ChatScreen} />
       <AppStack.Screen name="Notes" component={NotesScreen} />
+      <AppStack.Screen name="SuggestTree" component={AdminAddEditTreeScreen} />
       {/* Admin sub-screens (navigable from admin dashboard) */}
       <AppStack.Screen name="AdminTreeList" component={AdminTreeListScreen} />
       <AppStack.Screen name="AdminAddEditTree" component={AdminAddEditTreeScreen} />

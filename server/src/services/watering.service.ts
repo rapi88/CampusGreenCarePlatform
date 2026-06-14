@@ -2,7 +2,7 @@
 import { prisma } from '../config/database';
 import { config } from '../config/env';
 import { haversineDistance } from '../utils/geo';
-import { BadRequestError, NotFoundError } from '../utils/errors';
+import { BadRequestError, ForbiddenError, NotFoundError } from '../utils/errors';
 
 const WATERING_POINTS = 10;
 
@@ -12,13 +12,21 @@ export const wateringService = {
     const tree = await prisma.tree.findUnique({ where: { id: treeId } });
     if (!tree) throw new NotFoundError('Tree not found');
 
+    const adoption = await prisma.adoption.findUnique({
+      where: { userId_treeId: { userId, treeId } },
+    });
+
+    if (!adoption) {
+      throw new ForbiddenError('Bu ağacı sulayamazsınız. Bu ağacın gönüllüsü değilsiniz.');
+    }
+
     // GPS proximity check (server-side validation)
     const distance = haversineDistance(userLat, userLng, tree.latitude, tree.longitude);
     const gpsVerified = distance <= config.wateringProximityThreshold;
 
     if (!gpsVerified) {
       throw new BadRequestError(
-        `You must be near the tree to water it. Your distance: ${Math.round(distance)} meters (max: ${config.wateringProximityThreshold} m)`
+        `Ağacı sulamak için ağaca daha yakın olmalısınız. Uzaklığınız: ${Math.round(distance)} metre (en fazla ${config.wateringProximityThreshold} m)`
       );
     }
 
