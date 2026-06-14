@@ -2,6 +2,7 @@
 import { Router } from 'express';
 import { treeController } from '../controllers/tree.controller';
 import { auth } from '../middleware/auth';
+import { upload } from '../middleware/upload';
 
 const router = Router();
 
@@ -14,6 +15,7 @@ router.get('/:id', treeController.getById);
 
 // Authenticated endpoints
 router.post('/suggest', auth, treeController.suggest);
+router.post('/:id/photo', auth, upload.single('photo'), treeController.uploadTreePhoto);
 router.put('/suggestions/:id/dismiss', auth, treeController.dismissSuggestion);
 router.post('/:id/adopt', auth, treeController.adopt);
 router.delete('/:id/adopt', auth, treeController.leaveAdoption);

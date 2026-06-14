@@ -58,9 +58,11 @@ export const authService = {
       throw new BadRequestError('Only @gtu.edu.tr emails are allowed');
     }
 
+    const normalizedEmail = email.toLowerCase().trim();
+
     // Check if email already registered
-    const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
-    if (existing) {
+    const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    if (existing?.isVerified) {
       throw new ConflictError('This email is already registered');
     }
 
@@ -70,20 +72,40 @@ export const authService = {
     }
 
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
-    const verifyToken = jwt.sign({ email: email.toLowerCase().trim() }, config.jwt.secret as string, { expiresIn: '1d' });
+    const verifyToken = jwt.sign({ email: normalizedEmail }, config.jwt.secret as string, { expiresIn: '1d' });
 
-    const user = await prisma.user.create({
-      data: {
-        name: name.trim(),
-        email: email.toLowerCase().trim(),
-        passwordHash,
-        verifyToken,
-      },
-    });
+    const user = existing
+      ? await prisma.user.update({
+          where: { id: existing.id },
+          data: {
+            name: name.trim(),
+            passwordHash,
+            verifyToken,
+          },
+        })
+      : await prisma.user.create({
+          data: {
+            name: name.trim(),
+            email: normalizedEmail,
+            passwordHash,
+            verifyToken,
+          },
+        });
 
-    await mailService.sendVerificationEmail(email.toLowerCase().trim(), verifyToken);
+    try {
+      await mailService.sendVerificationEmail(normalizedEmail, verifyToken);
+    } catch (error) {
+      if (!existing) {
+        await prisma.user.delete({ where: { id: user.id } });
+      }
+      throw error;
+    }
 
-    return { message: 'Registration successful. Please check your email for the verification link.', userId: user.id };
+    return {
+      message: 'Registration successful. Please check your email for the verification link.',
+      userId: user.id,
+      verificationEmailSent: true,
+    };
   },
 
   async login(email: string, password: string) {
@@ -142,17 +164,52 @@ export const authService = {
   },
 
   async forgotPassword(email: string) {
+    const normalizedEmail = email.toLowerCase().trim();
     const user = await prisma.user.findUnique({
-      where: { email: email.toLowerCase().trim() },
+      where: { email: normalizedEmail },
     });
 
     // Always return success to prevent email enumeration
     if (user) {
-      // TODO: Implement actual email sending (e.g., via Resend or SendGrid)
-      console.log(`[Auth] Password reset requested for ${email}`);
+      const resetToken = jwt.sign(
+        { email: normalizedEmail, purpose: 'password-reset' },
+        config.jwt.secret as string,
+        { expiresIn: '1h' },
+      );
+      await mailService.sendPasswordResetEmail(normalizedEmail, resetToken);
     }
 
     return { message: 'Password reset link sent to your email.' };
+  },
+
+  async resetPassword(token: string, password: string) {
+    if (password.length < 8 || !/[A-Z]/.test(password) || !/[0-9]/.test(password)) {
+      throw new BadRequestError('Password must contain at least 8 characters, one uppercase letter, and one number');
+    }
+
+    let decoded;
+    try {
+      decoded = jwt.verify(token, config.jwt.secret as string) as { email: string; purpose?: string };
+    } catch {
+      throw new BadRequestError('Invalid or expired password reset link');
+    }
+
+    if (decoded.purpose !== 'password-reset') {
+      throw new BadRequestError('Invalid password reset link');
+    }
+
+    const user = await prisma.user.findUnique({ where: { email: decoded.email } });
+    if (!user) {
+      throw new BadRequestError('Invalid password reset link');
+    }
+
+    const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash },
+    });
+
+    return { message: 'Password reset successfully. You can now log in.' };
   },
 
   async registerPushToken(userId: string, expoPushToken: string) {

@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { treeService } from '../services/tree.service';
 import { reportService } from '../services/report.service';
-import { prisma } from '../config/database';
 
 export const adminController = {
   // ── Tree CRUD ──────────────────────────────────────────
@@ -78,11 +77,7 @@ export const adminController = {
         return;
       }
       
-      const { StorageService } = require('../services/storage.service');
-      const filename = StorageService.generateFilename(req.file.originalname);
-      const publicUrl = await StorageService.uploadFile('trees', `${id}_${filename}`, req.file.buffer, req.file.mimetype);
-      
-      const tree = await treeService.update(id, { photoPath: publicUrl });
+      const tree = await treeService.uploadPhoto(id, req.file);
       res.json(tree);
     } catch (error) {
       next(error);

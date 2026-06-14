@@ -61,7 +61,7 @@ model Tree {
   latitude           Float
   longitude          Float
   location           String   // Human-readable description (e.g. "Merkezi Avlu, Sektör A")
-  photoPath          String?  // Local path: /uploads/trees/<filename>
+  photoPath          String?  // Supabase Storage public URL
   estimatedAge       Int      @default(0)
   height             Float    @default(0)
   plantingDate       DateTime?

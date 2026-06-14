@@ -35,6 +35,31 @@ export const treeController = {
     }
   },
 
+  async uploadTreePhoto(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = req.params.id as string;
+      if (!req.file) {
+        res.status(400).json({ message: 'No photo provided' });
+        return;
+      }
+
+      const isAdmin = req.user!.role === 'ADMIN';
+      const suggestion = await prisma.treeSuggestion.findFirst({
+        where: { treeId: id, userId: req.user!.id },
+      });
+
+      if (!isAdmin && !suggestion) {
+        res.status(403).json({ message: 'Bu ağacın fotoğrafını değiştirme yetkiniz yok.' });
+        return;
+      }
+
+      const tree = await treeService.uploadPhoto(id, req.file);
+      res.json(tree);
+    } catch (error) {
+      next(error);
+    }
+  },
+
   async dismissSuggestion(req: Request, res: Response, next: NextFunction) {
     try {
       const id = req.params.id as string;

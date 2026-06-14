@@ -12,24 +12,67 @@ import FormInput from '../../components/common/FormInput';
 import { adminApi } from '../../api/admin.api';
 import { treesApi, Tree } from '../../api/trees.api';
 import MapboxMap from '../../components/map/MapboxMap';
+import { useAuthStore } from '../../store/auth.store';
+import { extractError } from '../../utils/error';
+
+type SelectedTreePhoto = {
+  uri: string;
+  mimeType: string;
+  fileName: string;
+};
+
+async function buildTreePhotoFormData(photo: SelectedTreePhoto) {
+  const formData = new FormData();
+
+  if (Platform.OS === 'web') {
+    const response = await fetch(photo.uri);
+    const blob = await response.blob();
+    const typedBlob = blob.type ? blob : new Blob([blob], { type: photo.mimeType });
+    formData.append('photo', typedBlob as any, photo.fileName);
+    return formData;
+  }
+
+  formData.append('photo', {
+    uri: photo.uri,
+    type: photo.mimeType,
+    name: photo.fileName,
+  } as any);
+
+  return formData;
+}
+
+function parseOptionalInteger(value: string) {
+  const parsed = parseInt(value.trim(), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
+function parseOptionalDecimal(value: string) {
+  const parsed = parseFloat(value.trim().replace(',', '.'));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
 
 export default function AdminAddEditTreeScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const queryClient = useQueryClient();
+  const user = useAuthStore((s) => s.user);
   const treeId = route.params?.treeId;
   const isEdit = !!treeId;
+  const isAdmin = user?.role === 'ADMIN';
+  const isSuggestionMode = !isAdmin && !isEdit;
 
   const [name, setName] = useState('');
   const [species, setSpecies] = useState('');
   const [location, setLocation] = useState('');
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
+  const [estimatedAge, setEstimatedAge] = useState('');
+  const [height, setHeight] = useState('');
   const [wateringPeriodDays, setWateringPeriodDays] = useState('3');
   const [isNaturalMonument, setIsNaturalMonument] = useState(false);
   const [showMapModal, setShowMapModal] = useState(false);
   const [tempPin, setTempPin] = useState<{lat: number, lng: number} | null>(null);
-  const [photo, setPhoto] = useState<{ uri: string; mimeType: string; fileName: string } | null>(null);
+  const [photo, setPhoto] = useState<SelectedTreePhoto | null>(null);
   const [existingPhotoUrl, setExistingPhotoUrl] = useState<string | null>(null);
 
   const { data: treeResponse, isLoading: isLoadingTree } = useQuery({
@@ -46,6 +89,8 @@ export default function AdminAddEditTreeScreen() {
       setLocation(t.location || '');
       setLatitude(t.latitude?.toString() || '');
       setLongitude(t.longitude?.toString() || '');
+      setEstimatedAge(t.estimatedAge && t.estimatedAge > 0 ? t.estimatedAge.toString() : '');
+      setHeight(t.height && t.height > 0 ? t.height.toString() : '');
       setWateringPeriodDays(t.wateringPeriodDays?.toString() || '3');
       setIsNaturalMonument(t.isNaturalMonument || false);
       setExistingPhotoUrl(t.photoUrl || null);
@@ -54,18 +99,23 @@ export default function AdminAddEditTreeScreen() {
 
   const saveMutation = useMutation({
     mutationFn: async (data: Partial<Tree>) => {
+      if (isSuggestionMode) {
+        const saveResponse = await treesApi.suggest(data);
+
+        if (photo) {
+          const formData = await buildTreePhotoFormData(photo);
+          return treesApi.uploadTreePhoto(saveResponse.data.id, formData);
+        }
+
+        return saveResponse;
+      }
+
       const saveResponse = isEdit
         ? await adminApi.updateTree(treeId, data)
         : await adminApi.createTree(data);
 
       if (photo) {
-        const formData = new FormData();
-        formData.append('photo', {
-          uri: photo.uri,
-          type: photo.mimeType,
-          name: photo.fileName,
-        } as any);
-
+        const formData = await buildTreePhotoFormData(photo);
         return adminApi.uploadTreePhoto(saveResponse.data.id, formData);
       }
 
@@ -73,13 +123,24 @@ export default function AdminAddEditTreeScreen() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trees'] });
+      queryClient.invalidateQueries({ queryKey: ['my-trees'] });
       if (isEdit) queryClient.invalidateQueries({ queryKey: ['tree', treeId] });
-      Toast.show({ type: 'success', text1: 'Başarılı', text2: `Ağaç başarıyla ${isEdit ? 'güncellendi' : 'eklendi'}.` });
+      Toast.show({
+        type: 'success',
+        text1: 'Başarılı',
+        text2: isSuggestionMode
+          ? 'Ağaç öneriniz admin onayına gönderildi.'
+          : `Ağaç başarıyla ${isEdit ? 'güncellendi' : 'eklendi'}.`,
+      });
       navigation.goBack();
     },
     onError: (error) => {
       console.error('Tree save failed:', error);
-      Toast.show({ type: 'error', text1: 'Hata', text2: `Ağaç ${isEdit ? 'güncellenemedi' : 'eklenemedi'}.` });
+      Toast.show({
+        type: 'error',
+        text1: 'Hata',
+        text2: extractError(error),
+      });
     }
   });
 
@@ -111,17 +172,28 @@ export default function AdminAddEditTreeScreen() {
 
   const handleSave = () => {
     if (!name || !species || !location || !latitude || !longitude) {
-      Alert.alert('Eksik Alanlar', 'Lütfen tüm zorunlu alanlari doldurun.');
+      Alert.alert('Eksik Alanlar', 'Lütfen tüm zorunlu alanları doldurun.');
       return;
     }
-    
-    saveMutation.mutate({
+
+    const basePayload = {
       name,
       species,
       location,
       latitude: parseFloat(latitude),
       longitude: parseFloat(longitude),
+      estimatedAge: parseOptionalInteger(estimatedAge),
+      height: parseOptionalDecimal(height),
       wateringPeriodDays: parseInt(wateringPeriodDays, 10),
+    };
+
+    if (isSuggestionMode) {
+      saveMutation.mutate(basePayload);
+      return;
+    }
+
+    saveMutation.mutate({
+      ...basePayload,
       isNaturalMonument,
       status: 'ACTIVE' // Admin created trees are ACTIVE directly
     });
@@ -133,8 +205,8 @@ export default function AdminAddEditTreeScreen() {
 
   const confirmMapPin = () => {
     if (tempPin) {
-      setLatitude(tempPin.lat.toString());
-      setLongitude(tempPin.lng.toString());
+      setLatitude(tempPin.lat.toFixed(6));
+      setLongitude(tempPin.lng.toFixed(6));
     }
     setShowMapModal(false);
   };
@@ -178,6 +250,30 @@ export default function AdminAddEditTreeScreen() {
           <FormInput label="Tür *" placeholder="örn. Quercus alba" value={species} onChangeText={setSpecies} />
           <FormInput label="Konum Açıklaması *" placeholder="örn. Merkez Avlu" value={location} onChangeText={setLocation} />
 
+          <Text style={styles.sectionLabel}>Fiziksel Bilgiler</Text>
+          <View style={styles.coordRow}>
+            <View style={styles.coordInput}>
+              <FormInput
+                label="Tahmini Yaş"
+                placeholder="Bilinmiyor"
+                value={estimatedAge}
+                onChangeText={setEstimatedAge}
+                keyboardType="number-pad"
+                style={styles.coordTextInput}
+              />
+            </View>
+            <View style={styles.coordInput}>
+              <FormInput
+                label="Boy (metre)"
+                placeholder="Bilinmiyor"
+                value={height}
+                onChangeText={setHeight}
+                keyboardType="decimal-pad"
+                style={styles.coordTextInput}
+              />
+            </View>
+          </View>
+
         <Text style={styles.sectionLabel}>Ağaç Fotoğrafı</Text>
         <TouchableOpacity style={styles.photoPicker} onPress={pickPhoto} activeOpacity={0.85}>
           {photo?.uri || existingPhotoUrl ? (
@@ -198,10 +294,24 @@ export default function AdminAddEditTreeScreen() {
         <Text style={styles.sectionLabel}>GPS Koordinatları</Text>
         <View style={styles.coordRow}>
           <View style={styles.coordInput}>
-            <FormInput label="Enlem *" placeholder="40.8040" value={latitude} onChangeText={setLatitude} keyboardType="decimal-pad" />
+            <FormInput
+              label="Enlem *"
+              placeholder="40.8040"
+              value={latitude}
+              onChangeText={setLatitude}
+              keyboardType="decimal-pad"
+              style={styles.coordTextInput}
+            />
           </View>
           <View style={styles.coordInput}>
-            <FormInput label="Boylam *" placeholder="29.3610" value={longitude} onChangeText={setLongitude} keyboardType="decimal-pad" />
+            <FormInput
+              label="Boylam *"
+              placeholder="29.3610"
+              value={longitude}
+              onChangeText={setLongitude}
+              keyboardType="decimal-pad"
+              style={styles.coordTextInput}
+            />
           </View>
         </View>
 
@@ -235,13 +345,17 @@ export default function AdminAddEditTreeScreen() {
         <Text style={styles.sectionLabel}>Bakım Ayarları</Text>
         <FormInput label="Sulama Periyodu (gün)" placeholder="3" value={wateringPeriodDays} onChangeText={setWateringPeriodDays} keyboardType="number-pad" />
 
-        <View style={styles.switchRow}>
-          <View>
-            <Text style={styles.switchLabel}>Doğal Anıt</Text>
-            <Text style={styles.switchDesc}>Bu ağaç doğal anıt olarak kabul ediliyor mu?</Text>
-          </View>
-          <Switch value={isNaturalMonument} onValueChange={setIsNaturalMonument} trackColor={{ false: Colors.neutralLight, true: Colors.greenPrimary }} thumbColor={Colors.white} />
-        </View>
+        {!isSuggestionMode && (
+          <>
+            <View style={styles.switchRow}>
+              <View>
+                <Text style={styles.switchLabel}>Doğal Anıt</Text>
+                <Text style={styles.switchDesc}>Bu ağaç doğal anıt olarak kabul ediliyor mu?</Text>
+              </View>
+              <Switch value={isNaturalMonument} onValueChange={setIsNaturalMonument} trackColor={{ false: Colors.neutralLight, true: Colors.greenPrimary }} thumbColor={Colors.white} />
+            </View>
+          </>
+        )}
 
           <TouchableOpacity 
             style={[styles.saveBtn, saveMutation.isPending && { backgroundColor: Colors.neutralMid }]} 
@@ -270,7 +384,8 @@ const styles = StyleSheet.create({
   form: { flexGrow: 1, padding: Spacing.md, paddingBottom: 220 },
   sectionLabel: { fontSize: 13, fontWeight: '700', color: Colors.neutralMid, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: Spacing.md, marginBottom: Spacing.sm },
   coordRow: { flexDirection: 'row', gap: Spacing.sm },
-  coordInput: { flex: 1 },
+  coordInput: { flex: 1, minWidth: 0 },
+  coordTextInput: { fontSize: 14 },
   photoPicker: {
     height: 180,
     backgroundColor: Colors.white,

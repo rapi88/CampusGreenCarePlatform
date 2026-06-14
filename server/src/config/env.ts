@@ -37,11 +37,25 @@ export const config = {
 
   supabase: {
     url: process.env.SUPABASE_URL || '',
-    serviceKey: process.env.SUPABASE_SERVICE_KEY || '',
+    key: process.env.SUPABASE_SERVICE_KEY
+      || process.env.SUPABASE_SERVICE_ROLE_KEY
+      || process.env.SUPABASE_PUBLISHABLE_KEY
+      || process.env.SUPABASE_ANON_KEY
+      || '',
+    usesServiceRoleKey: Boolean(process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY),
+    buckets: {
+      trees: process.env.SUPABASE_TREES_BUCKET
+        || process.env.SUPABASE_TREE_PHOTOS_BUCKET
+        || process.env.SUPABASE_STORAGE_BUCKET
+        || 'trees',
+      avatars: process.env.SUPABASE_AVATARS_BUCKET
+        || process.env.SUPABASE_AVATAR_BUCKET
+        || 'avatars',
+    },
   },
 
   // GPS proximity threshold for watering validation (meters)
-  wateringProximityThreshold: 50, // Generous for GPS inaccuracy
+  wateringProximityThreshold: 200, // Generous for campus GPS inaccuracy
 
   // Enable notification test endpoints in the admin panel
   notificationDebug: process.env.NOTIFICATION_DEBUG === 'true',
