@@ -1,6 +1,8 @@
 import { prisma } from '../config/database';
 import { Health, TreeStatus } from '@prisma/client';
 import { NotFoundError } from '../utils/errors';
+import { config } from '../config/env';
+import { StorageService } from './storage.service';
 
 export type ComputedTreeStatus = 'watered' | 'needs_water' | 'due_soon';
 type HealthLabel = 'Healthy' | 'Sick' | 'Critical';
@@ -256,6 +258,9 @@ export const treeService = {
     latitude: number;
     longitude: number;
     location: string;
+    estimatedAge?: number;
+    height?: number;
+    wateringPeriodDays?: number;
   }, userId: string) {
     const tree = await prisma.tree.create({
       data: {
@@ -264,6 +269,9 @@ export const treeService = {
         latitude: data.latitude,
         longitude: data.longitude,
         location: data.location,
+        estimatedAge: data.estimatedAge || 0,
+        height: data.height || 0,
+        wateringPeriodDays: data.wateringPeriodDays || 3,
         status: 'PENDING',
         suggestion: {
           create: {
@@ -356,6 +364,39 @@ export const treeService = {
     }
 
     await prisma.tree.update({ where: { id }, data: updateData });
+    return this.getById(id);
+  },
+
+  async uploadPhoto(id: string, file: Express.Multer.File) {
+    const existing = await prisma.tree.findUnique({ where: { id } });
+    if (!existing) throw new NotFoundError('Tree not found');
+
+    const bucket = config.supabase.buckets.trees;
+    const storagePath = StorageService.generateObjectPath('trees', id, file.originalname);
+    const publicUrl = await StorageService.uploadFile(
+      bucket,
+      storagePath,
+      file.buffer,
+      file.mimetype
+    );
+
+    await prisma.tree.update({
+      where: { id },
+      data: { photoPath: publicUrl },
+    });
+
+    const previousPath = existing.photoPath?.startsWith('http')
+      ? StorageService.pathFromPublicUrl(bucket, existing.photoPath)
+      : existing.photoPath && !existing.photoPath.startsWith('/uploads/')
+        ? existing.photoPath
+        : null;
+
+    if (previousPath) {
+      StorageService.deleteFile(bucket, previousPath).catch((error) => {
+        console.warn(`Failed to delete previous tree photo from Supabase: ${error.message}`);
+      });
+    }
+
     return this.getById(id);
   },
 

@@ -5,11 +5,11 @@ import { config } from '../config/env';
 const storage = multer.memoryStorage();
 
 const fileFilter = (_req: Express.Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic', 'image/heif'];
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Only JPEG, PNG, and WebP files are allowed.'));
+    cb(new Error('Only JPEG, PNG, WebP, HEIC, and HEIF files are allowed.'));
   }
 };
 
