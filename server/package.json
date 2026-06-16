@@ -4,6 +4,7 @@
   "description": "Backend API for Campus Green Care Platform",
   "main": "dist/index.js",
   "scripts": {
+    "postinstall": "prisma generate",
     "predev": "prisma generate && prisma db push",
     "dev": "nodemon",
     "prebuild": "prisma generate",
