@@ -7,8 +7,8 @@ export const reportService = {
    */
   async getDashboardStats() {
     const [totalTrees, activeVolunteers, wateringsToday] = await Promise.all([
-      prisma.tree.count(),
-      prisma.user.count({ where: { role: 'USER', adoptions: { some: {} } } }),
+      prisma.tree.count({ where: { status: 'ACTIVE' } }),
+      prisma.user.count(),
       prisma.wateringEvent.count({
         where: {
           createdAt: {

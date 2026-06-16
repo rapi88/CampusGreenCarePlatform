@@ -13,13 +13,22 @@ export const adoptionService = {
     });
     if (!tree) throw new NotFoundError('Tree not found');
 
+    if (tree.status !== 'ACTIVE') {
+      throw new BadRequestError('Only active trees can be adopted');
+    }
+
     // Check tree volunteer capacity
     if (tree._count.adoptions >= tree.maxVolunteers) {
       throw new BadRequestError('Maximum volunteer capacity reached for this tree');
     }
 
     // Check user adoption limit
-    const userAdoptionCount = await prisma.adoption.count({ where: { userId } });
+    const userAdoptionCount = await prisma.adoption.count({
+      where: {
+        userId,
+        tree: { is: { status: 'ACTIVE' } },
+      },
+    });
     if (userAdoptionCount >= MAX_TREES_PER_USER) {
       throw new BadRequestError(`A user can adopt a maximum of ${MAX_TREES_PER_USER} trees`);
     }

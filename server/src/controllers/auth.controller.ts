@@ -185,19 +185,35 @@ export const authController = {
       }
 
       const { StorageService } = require('../services/storage.service');
+      const bucket = config.supabase.buckets.avatars;
       const storagePath = StorageService.generateObjectPath('avatars', req.user!.id, req.file.originalname);
       const publicUrl = await StorageService.uploadFile(
-        config.supabase.buckets.avatars,
+        bucket,
         storagePath,
         req.file.buffer,
         req.file.mimetype
       );
 
       const { prisma } = require('../config/database');
+      const existingUser = await prisma.user.findUnique({
+        where: { id: req.user!.id },
+        select: { avatarUrl: true },
+      });
+
       await prisma.user.update({
         where: { id: req.user!.id },
         data: { avatarUrl: publicUrl },
       });
+
+      const previousPath = existingUser?.avatarUrl?.startsWith('http')
+        ? StorageService.pathFromPublicUrl(bucket, existingUser.avatarUrl)
+        : null;
+
+      if (previousPath) {
+        StorageService.deleteFile(bucket, previousPath).catch((error: Error) => {
+          console.warn(`Failed to delete previous avatar from Supabase: ${error.message}`);
+        });
+      }
 
       res.json({ message: 'Avatar updated successfully', avatarUrl: publicUrl });
     } catch (error) {
