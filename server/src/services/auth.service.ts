@@ -33,8 +33,11 @@ async function formatUserResponse(userId: string): Promise<UserResponse> {
   const user = await prisma.user.findUniqueOrThrow({
     where: { id: userId },
     include: {
-      adoptions: { select: { treeId: true } },
-      _count: { select: { adoptions: true, wateringEvents: true } },
+      adoptions: {
+        where: { tree: { is: { status: { not: 'REMOVED' } } } },
+        select: { treeId: true },
+      },
+      _count: { select: { wateringEvents: true } },
     },
   });
 
@@ -45,7 +48,7 @@ async function formatUserResponse(userId: string): Promise<UserResponse> {
     role: user.role,
     avatarUrl: user.avatarUrl,
     points: user.points,
-    adoptedTreeCount: user._count.adoptions,
+    adoptedTreeCount: user.adoptions.length,
     totalWaterings: user._count.wateringEvents,
     adoptedTreeIds: user.adoptions.map((a) => a.treeId),
   };
