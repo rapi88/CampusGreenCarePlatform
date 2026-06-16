@@ -71,9 +71,19 @@ export const treeService = {
   },
 
   async getMyTrees(userId: string) {
+    await prisma.adoption.deleteMany({
+      where: {
+        userId,
+        tree: { is: { status: 'REMOVED' } },
+      },
+    });
+
     // Adopted trees
     const adoptions = await prisma.adoption.findMany({
-      where: { userId },
+      where: {
+        userId,
+        tree: { is: { status: { not: 'REMOVED' } } },
+      },
       include: {
         tree: {
           include: {
@@ -404,10 +414,14 @@ export const treeService = {
     const existing = await prisma.tree.findUnique({ where: { id } });
     if (!existing) throw new NotFoundError('Tree not found');
 
-    await prisma.tree.update({ 
-      where: { id },
-      data: { status: 'REMOVED' }
-    });
+    await prisma.$transaction([
+      prisma.adoption.deleteMany({ where: { treeId: id } }),
+      prisma.tree.update({
+        where: { id },
+        data: { status: 'REMOVED' },
+      }),
+    ]);
+
     return { message: 'Tree removed' };
   },
 };

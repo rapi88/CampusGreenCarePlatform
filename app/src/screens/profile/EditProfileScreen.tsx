@@ -14,6 +14,32 @@ import { useAuthStore } from '../../store/auth.store';
 import { authApi } from '../../api/auth.api';
 import ScaleButton from '../../components/common/ScaleButton';
 
+type SelectedAvatar = {
+  uri: string;
+  mimeType: string;
+  fileName: string;
+};
+
+async function buildAvatarFormData(avatar: SelectedAvatar) {
+  const formData = new FormData();
+
+  if (Platform.OS === 'web') {
+    const response = await fetch(avatar.uri);
+    const blob = await response.blob();
+    const typedBlob = blob.type ? blob : new Blob([blob], { type: avatar.mimeType });
+    formData.append('avatar', typedBlob as any, avatar.fileName);
+    return formData;
+  }
+
+  formData.append('avatar', {
+    uri: avatar.uri,
+    type: avatar.mimeType,
+    name: avatar.fileName,
+  } as any);
+
+  return formData;
+}
+
 export default function EditProfileScreen() {
   const navigation = useNavigation<any>();
   const { user, updateUser } = useAuthStore();
@@ -54,22 +80,22 @@ export default function EditProfileScreen() {
       if (result.canceled || !result.assets?.[0]) return;
 
       const asset = result.assets[0];
-      uploadAvatar(asset.uri, asset.mimeType ?? 'image/jpeg');
+      const mimeType = asset.mimeType ?? 'image/jpeg';
+      const extension = mimeType.split('/')[1] || 'jpg';
+      uploadAvatar({
+        uri: asset.uri,
+        mimeType,
+        fileName: asset.fileName ?? `avatar.${extension}`,
+      });
     } catch (e: any) {
       Toast.show({ type: 'error', text1: 'Hata', text2: e?.message ?? 'Seçici açılamadı' });
     }
   };
 
-  const uploadAvatar = async (uri: string, mimeType: string) => {
+  const uploadAvatar = async (avatar: SelectedAvatar) => {
     setUploading(true);
     try {
-      const formData = new FormData();
-      formData.append('avatar', {
-        uri: Platform.OS === 'ios' ? uri.replace('file://', '') : uri,
-        type: mimeType,
-        name: 'avatar.jpg',
-      } as any);
-
+      const formData = await buildAvatarFormData(avatar);
       const res = await authApi.uploadAvatar(formData);
       updateUser({ avatarUrl: res.data.avatarUrl });
       Toast.show({ type: 'success', text1: 'Fotoğraf güncellendi', text2: 'Profil fotoğrafınız kaydedildi.' });
