@@ -15,6 +15,7 @@ import adminRoutes from './routes/admin.routes';
 import debugRoutes from './routes/debug.routes';
 import awardRoutes from './routes/award.routes';
 import leaderboardRoutes from './routes/leaderboard.routes';
+import cronRoutes from './routes/cron.routes';
 
 const app = express();
 
@@ -55,6 +56,7 @@ app.use('/api/users/leaderboard', leaderboardRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/award', awardRoutes);
 app.use('/api/debug', debugRoutes);
+app.use('/api/cron', cronRoutes);
 
 // ── 404 Handler ──────────────────────────────────────────
 
@@ -68,20 +70,22 @@ app.use(errorHandler);
 
 // ── Start Server ─────────────────────────────────────────
 
-app.listen(config.port, () => {
-  console.log(`
-  🌿 Campus Green Care Backend
-  ─────────────────────────────
-  🚀 Server running on port ${config.port}
-  📊 Environment: ${config.nodeEnv}
-  🗄️  Database: PostgreSQL
-  📦 Static files: /uploads
-  🔗 API base: http://localhost:${config.port}/api
-  ─────────────────────────────
-  `);
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(config.port, () => {
+    console.log(`
+    🌿 Campus Green Care Backend
+    ─────────────────────────────
+    🚀 Server running on port ${config.port}
+    📊 Environment: ${config.nodeEnv}
+    🗄️  Database: PostgreSQL
+    📦 Static files: /uploads
+    🔗 API base: http://localhost:${config.port}/api
+    ─────────────────────────────
+    `);
 
-  // Start cron scheduler for watering reminders
-  schedulerService.start();
-});
+    // Start cron scheduler for watering reminders locally
+    schedulerService.start();
+  });
+}
 
 export default app;
