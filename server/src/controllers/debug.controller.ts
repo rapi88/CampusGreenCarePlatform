@@ -139,8 +139,8 @@ export const debugController = {
           return;
         }
 
-        const tickets = await notificationService.sendWateringReminder(tree.name, tree.id, tokens);
-        res.json({ message: `Watering reminder sent to ${tickets.length} adopter(s)`, treeName: tree.name, adoptersNotified: tickets.length });
+        const batchResponse = await notificationService.sendWateringReminder(tree.name, tree.id, tokens);
+        res.json({ message: `Watering reminder sent to ${batchResponse.successCount} adopter(s)`, treeName: tree.name, adoptersNotified: batchResponse.successCount });
       }
     } catch (error) {
       next(error);
@@ -176,61 +176,25 @@ export const debugController = {
         data: { type: 'broadcast_test' },
       }));
 
-      const tickets = await notificationService.sendBatch(messages);
+      const batchResponse = await notificationService.sendBatch(messages);
 
-      const okTickets = tickets.filter((t: any) => t.status === 'ok');
-      const errorTickets = tickets.filter((t: any) => t.status === 'error');
-      const receiptIds = okTickets.map((t: any) => t.id).filter(Boolean);
-
-      console.log('[Broadcast] Tickets:', JSON.stringify(tickets, null, 2));
+      const okCount = batchResponse.successCount;
+      const errorCount = batchResponse.failureCount;
+      
+      const errors = batchResponse.responses
+        .filter(r => !r.success)
+        .map(r => ({ message: r.error?.message, details: r.error?.code }));
 
       res.json({
-        message: `Broadcast: ${okTickets.length} accepted, ${errorTickets.length} rejected by Expo`,
+        message: `Broadcast: ${okCount} accepted, ${errorCount} rejected by FCM`,
         usersFound: users.length,
         validTokens: messages.length,
-        accepted: okTickets.length,
-        rejected: errorTickets.length,
-        errors: errorTickets.map((t: any) => ({ message: t.message, details: t.details })),
-        receiptIds,
-        hint: receiptIds.length > 0
-          ? 'Check receipts after ~30s to confirm APNs delivery'
-          : 'No receipts — all tokens were rejected before reaching APNs',
-      });
-    } catch (error) {
-      next(error);
-    }
-  },
-
-  /**
-   * Check Expo push receipts for given ticket IDs.
-   * Call this ~30s after a broadcast to see if APNs actually delivered.
-   */
-  async checkReceipts(req: Request, res: Response, next: NextFunction) {
-    try {
-      if (!config.notificationDebug) {
-        res.status(403).json({ message: 'Notification debug mode is disabled' });
-        return;
-      }
-
-      const { receiptIds } = req.body;
-      if (!Array.isArray(receiptIds) || receiptIds.length === 0) {
-        res.status(400).json({ message: 'receiptIds array is required' });
-        return;
-      }
-
-      const receipts = await notificationService.checkReceipts(receiptIds);
-
-      const ok = Object.values(receipts).filter((r: any) => r.status === 'ok').length;
-      const errors = Object.entries(receipts)
-        .filter(([, r]: any) => r.status === 'error')
-        .map(([id, r]: any) => ({ id, message: r.message, errorCode: r.details?.error }));
-
-      res.json({
-        total: Object.keys(receipts).length,
-        delivered: ok,
-        failed: errors.length,
+        accepted: okCount,
+        rejected: errorCount,
         errors,
-        rawReceipts: receipts,
+        hint: errorCount === 0
+          ? 'Tüm bildirimler Firebase tarafindan kabul edildi.'
+          : 'Bazi bildirimler FCM tarafindan reddedildi (muhtemelen gecersiz token).',
       });
     } catch (error) {
       next(error);
