@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -29,6 +29,7 @@ import MapboxMap from "../../components/map/MapboxMap";
 import AddTreeModal from "../../components/map/AddTreeModal";
 import { treesApi, Tree } from "../../api/trees.api";
 import { adminApi } from "../../api/admin.api";
+import { extractError } from "../../utils/error";
 
 const INITIAL_CENTER: [number, number] = [29.361, 40.804]; // [lng, lat]
 const INITIAL_ZOOM = 15;
@@ -65,9 +66,22 @@ export default function MapScreen() {
   const user = useAuthStore((s) => s.user);
   const [search, setSearch] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
-  const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [userCoords, setUserCoords] = useState<{
+    lat: number;
+    lng: number;
+    accuracy?: number | null;
+  } | null>(null);
+  const locationSubscriptionRef = useRef<Location.LocationSubscription | null>(null);
 
   const isAdmin = user?.role === "ADMIN";
+
+  const applyUserLocation = useCallback((loc: Location.LocationObject) => {
+    setUserCoords({
+      lat: loc.coords.latitude,
+      lng: loc.coords.longitude,
+      accuracy: loc.coords.accuracy,
+    });
+  }, []);
 
   const loadUserLocation = useCallback(async () => {
     try {
@@ -84,22 +98,49 @@ export default function MapScreen() {
       }
 
       if (loc) {
-        setUserCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+        applyUserLocation(loc);
       }
     } catch {
       // Distance labels stay hidden until a location is available.
     }
-  }, []);
+  }, [applyUserLocation]);
 
   useEffect(() => {
     let isMounted = true;
 
-    if (isMounted) loadUserLocation();
+    const startLocationTracking = async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted" || !isMounted) return;
+
+        const lastKnown = await Location.getLastKnownPositionAsync();
+        if (lastKnown && isMounted) {
+          applyUserLocation(lastKnown);
+        }
+
+        locationSubscriptionRef.current = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.Balanced,
+            distanceInterval: 5,
+            timeInterval: 3000,
+          },
+          (loc) => {
+            if (isMounted) applyUserLocation(loc);
+          },
+        );
+      } catch {
+        // The map still works without live user tracking.
+      }
+    };
+
+    startLocationTracking();
 
     return () => {
       isMounted = false;
+      locationSubscriptionRef.current?.remove();
+      locationSubscriptionRef.current = null;
     };
-  }, [loadUserLocation]);
+  }, [applyUserLocation]);
 
   useFocusEffect(
     useCallback(() => {
@@ -125,19 +166,49 @@ export default function MapScreen() {
     enabled: !!user,
   });
 
+  const finishTreeSubmitFlow = useCallback((message: string) => {
+    queryClient.invalidateQueries({ queryKey: ["trees"] });
+    queryClient.invalidateQueries({ queryKey: ["myTrees"] });
+    Toast.show({
+      type: "success",
+      text1: "Başarılı",
+      text2: message,
+    });
+    setShowAddModal(false);
+    setIsAddingTree(false);
+    setIsSuggestingTree(false);
+    setPendingPin(null);
+    setViewMode("map");
+  }, [
+    queryClient,
+    setIsAddingTree,
+    setIsSuggestingTree,
+    setPendingPin,
+    setViewMode,
+  ]);
+
   // Admin Create Tree Mutation
   const createTreeMutation = useMutation({
     mutationFn: (data: Partial<Tree>) => adminApi.createTree(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["trees"] });
+    onSuccess: () => finishTreeSubmitFlow("Ağaç başarıyla eklendi"),
+    onError: (error) => {
       Toast.show({
-        type: "success",
-        text1: "Başarılı",
-        text2: "Ağaç başarıyla eklendi",
+        type: "error",
+        text1: "Hata",
+        text2: extractError(error),
       });
-      setShowAddModal(false);
-      setIsAddingTree(false);
-      setPendingPin(null);
+    },
+  });
+
+  const suggestTreeMutation = useMutation({
+    mutationFn: (data: Partial<Tree>) => treesApi.suggest(data),
+    onSuccess: () => finishTreeSubmitFlow("Ağaç öneriniz admin onayına gönderildi."),
+    onError: (error) => {
+      Toast.show({
+        type: "error",
+        text1: "Hata",
+        text2: extractError(error),
+      });
     },
   });
 
@@ -195,6 +266,7 @@ export default function MapScreen() {
     (coords: { lat: number; lng: number }) => {
       if (isAddingTree || isSuggestingTree) {
         setPendingPin(coords);
+        setShowAddModal(true);
       }
     },
     [isAddingTree, isSuggestingTree, setPendingPin],
@@ -208,12 +280,6 @@ export default function MapScreen() {
     } else if (isAdmin) {
       setIsAddingTree(true);
       setSelectedTree(null);
-    }
-  };
-
-  const handleConfirmPin = () => {
-    if (pendingPin) {
-      setShowAddModal(true);
     }
   };
 
@@ -235,7 +301,17 @@ export default function MapScreen() {
     };
 
     if (isAddingTree) {
+      setShowAddModal(false);
+      setIsAddingTree(false);
+      setPendingPin(null);
+      setViewMode("map");
       createTreeMutation.mutate(payload);
+    } else if (isSuggestingTree) {
+      setShowAddModal(false);
+      setIsSuggestingTree(false);
+      setPendingPin(null);
+      setViewMode("map");
+      suggestTreeMutation.mutate(payload);
     }
   };
 
@@ -356,6 +432,7 @@ export default function MapScreen() {
             onMapClick={handleMapClick}
             maxBounds={USE_NEW_MAP_LIMITS ? CAMPUS_BOUNDS : undefined}
             followUserLocation={USE_NEW_MAP_LIMITS}
+            userLocation={userCoords}
             mapStyle={mapStyle}
           />
 
@@ -401,27 +478,6 @@ export default function MapScreen() {
               </View>
               <Text style={styles.previewArrow}>›</Text>
             </TouchableOpacity>
-          )}
-
-          {/* Pending pin confirm card */}
-          {(isAddingTree || isSuggestingTree) && pendingPin && (
-            <View style={styles.confirmCard}>
-              <View style={styles.confirmInfo}>
-                <Text style={styles.confirmTitle}>📍 Konum Seçildi</Text>
-                <Text style={styles.confirmCoords}>
-                  {pendingPin.lat.toFixed(6)}, {pendingPin.lng.toFixed(6)}
-                </Text>
-                <Text style={styles.confirmHint}>
-                  Konumu pini sürükleyerek ayarlayabilirsiniz
-                </Text>
-              </View>
-              <TouchableOpacity
-                style={styles.confirmBtn}
-                onPress={handleConfirmPin}
-              >
-                <Text style={styles.confirmBtnText}>Devam →</Text>
-              </TouchableOpacity>
-            </View>
           )}
 
           {/* FAB — add/suggest tree toggle */}
@@ -601,44 +657,6 @@ const styles = StyleSheet.create({
   previewRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   previewDist: { fontSize: 12, color: Colors.greenPrimary, fontWeight: "500" },
   previewArrow: { fontSize: 24, color: Colors.neutralLight },
-  // Confirm card for pending pin
-  confirmCard: {
-    position: "absolute",
-    bottom: Spacing.md,
-    left: Spacing.md,
-    right: Spacing.md,
-    backgroundColor: Colors.white,
-    borderRadius: Radius.lg,
-    padding: Spacing.md,
-    flexDirection: "row",
-    alignItems: "center",
-    ...Shadow.modal,
-    borderWidth: 2,
-    borderColor: Colors.greenPrimary,
-  },
-  confirmInfo: { flex: 1 },
-  confirmTitle: { fontSize: 15, fontWeight: "700", color: Colors.greenDark },
-  confirmCoords: {
-    fontSize: 12,
-    color: Colors.neutralMid,
-    marginTop: 2,
-    fontFamily: "monospace",
-  },
-  confirmHint: {
-    fontSize: 11,
-    color: Colors.neutralMid,
-    marginTop: 4,
-    fontStyle: "italic",
-  },
-  confirmBtn: {
-    backgroundColor: Colors.greenPrimary,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: Radius.md,
-    marginLeft: Spacing.md,
-    ...Shadow.card,
-  },
-  confirmBtnText: { fontSize: 14, fontWeight: "700", color: Colors.white },
   // FAB — admin add tree button
   fab: {
     position: "absolute",
