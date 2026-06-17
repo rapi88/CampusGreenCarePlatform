@@ -27,6 +27,7 @@ interface MapboxMapProps {
   maxBounds?: { ne: [number, number]; sw: [number, number] };
   followUserLocation?: boolean;
   userLocation?: { lat: number; lng: number; accuracy?: number | null } | null;
+  mapStyle?: 'outdoors' | 'satellite';
 }
 
 const statusColors: Record<string, string> = {
@@ -47,6 +48,7 @@ export default function MapboxMap({
   maxBounds,
   followUserLocation,
   userLocation,
+  mapStyle = 'satellite',
 }: MapboxMapProps) {
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
@@ -88,11 +90,42 @@ export default function MapboxMap({
       if (mapContainer.current && !mapRef.current) {
         const map = new mapboxgl.Map({
           container: mapContainer.current,
-          style: 'mapbox://styles/mapbox/outdoors-v12',
+          style: mapStyle === 'satellite' ? 'mapbox://styles/mapbox/satellite-streets-v12' : 'mapbox://styles/mapbox/outdoors-v12',
           center: initialCenter,
           zoom: initialZoom,
+          minZoom: 15.829358883792652,
           pitch: 30,
-          maxBounds: maxBounds ? [maxBounds.sw, maxBounds.ne] : undefined,
+          maxBounds: maxBounds ? [maxBounds.sw, maxBounds.ne] : [[29.344522, 40.805187], [29.364289, 40.814912]],
+        });
+
+        // Inject dynamic CSS variables to root for markers
+        const updateMarkerStyles = () => {
+          const currentZoom = map.getZoom();
+          // Scale formula: double size for every zoom level above 18
+          const baseScale = Math.pow(2, currentZoom - 18);
+          const clampedScale = Math.min(baseScale, 4); // Max 4x size
+          document.documentElement.style.setProperty('--map-marker-scale', clampedScale.toString());
+        };
+
+        map.on('zoom', updateMarkerStyles);
+
+        // Add User Location indicator
+        const geolocate = new mapboxgl.GeolocateControl({
+          positionOptions: { enableHighAccuracy: true },
+          trackUserLocation: true,
+          showUserHeading: false,
+          showAccuracyCircle: false,
+        });
+        map.addControl(geolocate);
+        
+        map.on('load', () => {
+          geolocate.trigger(); // Trigger automatically to show the blue dot
+        });
+
+        updateMarkerStyles(); // Initial call
+        
+        map.on('zoomend', () => {
+          console.log('Current Zoom Level (Web):', map.getZoom());
         });
 
         map.addControl(new mapboxgl.NavigationControl(), 'top-right');
@@ -127,6 +160,17 @@ export default function MapboxMap({
     };
   }, []);
 
+  // Update map style when mapStyle prop changes
+  useEffect(() => {
+    if (mapRef.current) {
+      mapRef.current.setStyle(
+        mapStyle === 'satellite' 
+          ? 'mapbox://styles/mapbox/satellite-streets-v12' 
+          : 'mapbox://styles/mapbox/outdoors-v12'
+      );
+    }
+  }, [mapStyle]);
+
   // Change cursor based on adding mode
   useEffect(() => {
     const map = mapRef.current;
@@ -159,38 +203,27 @@ export default function MapboxMap({
             flex-direction: column;
             align-items: center;
             cursor: pointer;
-            transform: scale(${isSelected ? 1.25 : 1});
-            transition: transform 0.2s ease;
+            transform: scale(calc(var(--map-marker-scale, 1) * ${isSelected ? 1.25 : 1}));
+            transition: transform 0.1s linear;
           ">
             <div style="
-              width: 36px;
-              height: 36px;
+              width: 24px;
+              height: 24px;
               border-radius: 50%;
               background: ${statusColors[tree.hydrationStatus] || '#999'};
-              border: 3px solid white;
+              border: 2px solid white;
               display: flex;
               align-items: center;
               justify-content: center;
               box-shadow: 0 2px 8px rgba(0,0,0,0.25);
-              font-size: 16px;
+              font-size: 12px;
             ">🌳</div>
-            <div style="
-              background: white;
-              padding: 2px 6px;
-              border-radius: 4px;
-              font-size: 10px;
-              font-weight: 700;
-              margin-top: 3px;
-              box-shadow: 0 1px 4px rgba(0,0,0,0.15);
-              white-space: nowrap;
-              color: #1C1C1E;
-            ">${tree.name}</div>
             <div style="
               width: 0;
               height: 0;
-              border-left: 6px solid transparent;
-              border-right: 6px solid transparent;
-              border-top: 6px solid white;
+              border-left: 4px solid transparent;
+              border-right: 4px solid transparent;
+              border-top: 4px solid white;
             "></div>
           </div>
         `;
