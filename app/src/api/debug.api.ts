@@ -14,16 +14,7 @@ export interface BroadcastResult {
   accepted: number;
   rejected: number;
   errors: { message: string; details: any }[];
-  receiptIds: string[];
   hint: string;
-}
-
-export interface ReceiptResult {
-  total: number;
-  delivered: number;
-  failed: number;
-  errors: { id: string; message: string; errorCode: string }[];
-  rawReceipts: Record<string, any>;
 }
 
 export const debugApi = {
@@ -36,7 +27,5 @@ export const debugApi = {
     ),
   broadcastTest: (message?: string) =>
     api.post<BroadcastResult>('/debug/notify/broadcast', { message }),
-  checkReceipts: (receiptIds: string[]) =>
-    api.post<ReceiptResult>('/debug/notify/receipts', { receiptIds }),
   triggerCron: () => api.post<{ message: string }>('/debug/trigger-cron'),
 };
