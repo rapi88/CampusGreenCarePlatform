@@ -1,16 +1,17 @@
 // Notification service — Firebase Cloud Messaging (FCM) sender
-import * as admin from 'firebase-admin';
+import { getApps, initializeApp, cert } from 'firebase-admin/app';
+import { getMessaging, SendResponse } from 'firebase-admin/messaging';
 import path from 'path';
 import fs from 'fs';
 
 // Initialize Firebase Admin SDK
-if (!admin.apps.length) {
+if (getApps().length === 0) {
   try {
     const serviceAccountPath = path.join(__dirname, '../config/campusgreencareplatform-90fd2-firebase-adminsdk-fbsvc-8e2e2f01a3.json');
     if (fs.existsSync(serviceAccountPath)) {
       const serviceAccount = require(serviceAccountPath);
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
+      initializeApp({
+        credential: cert(serviceAccount)
       });
       console.log('[Notification] Firebase Admin SDK initialized successfully.');
     } else {
@@ -38,7 +39,7 @@ export const notificationService = {
     };
 
     try {
-      const messageId = await admin.messaging().send(message);
+      const messageId = await getMessaging().send(message);
       console.log(`[Notification] Sent to ${fcmToken.substring(0, 10)}... Message ID: ${messageId}`);
       return messageId;
     } catch (error) {
@@ -70,7 +71,7 @@ export const notificationService = {
     const CHUNK_SIZE = 500;
     let successCount = 0;
     let failureCount = 0;
-    const allResponses: admin.messaging.SendResponse[] = [];
+    const allResponses: SendResponse[] = [];
 
     for (let i = 0; i < messages.length; i += CHUNK_SIZE) {
       const chunk = messages.slice(i, i + CHUNK_SIZE).map(m => ({
@@ -80,7 +81,7 @@ export const notificationService = {
       }));
       
       try {
-        const batchResponse = await admin.messaging().sendEach(chunk);
+        const batchResponse = await getMessaging().sendEach(chunk);
         successCount += batchResponse.successCount;
         failureCount += batchResponse.failureCount;
         allResponses.push(...batchResponse.responses);
@@ -114,7 +115,7 @@ export const notificationService = {
     };
 
     try {
-      const batchResponse = await admin.messaging().sendEachForMulticast(message);
+      const batchResponse = await getMessaging().sendEachForMulticast(message);
       console.log(`[Notification] Watering reminder sent: ${batchResponse.successCount} successful.`);
       return batchResponse;
     } catch (error) {
