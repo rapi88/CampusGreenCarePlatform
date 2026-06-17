@@ -26,6 +26,7 @@ interface MapboxMapProps {
   onMapClick?: (coords: { lat: number; lng: number }) => void;
   maxBounds?: { ne: [number, number]; sw: [number, number] };
   followUserLocation?: boolean;
+  userLocation?: { lat: number; lng: number; accuracy?: number | null } | null;
 }
 
 const statusColors: Record<string, string> = {
@@ -45,11 +46,13 @@ export default function MapboxMap({
   onMapClick,
   maxBounds,
   followUserLocation,
+  userLocation,
 }: MapboxMapProps) {
   const mapContainer = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
   const pendingMarkerRef = useRef<any>(null);
+  const userMarkerRef = useRef<any>(null);
   const clickHandlerRef = useRef<((e: any) => void) | null>(null);
   // Store latest callback refs so listeners always call the latest version
   const onMapClickRef = useRef(onMapClick);
@@ -299,6 +302,93 @@ export default function MapboxMap({
       pendingMarkerRef.current = marker;
     }
   }, [pendingPin]);
+
+  // Show / update live user location marker
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapboxgl) return;
+
+    if (!userLocation) {
+      if (userMarkerRef.current) {
+        userMarkerRef.current.remove();
+        userMarkerRef.current = null;
+      }
+      return;
+    }
+
+    if (!document.getElementById('user-location-marker-style')) {
+      const style = document.createElement('style');
+      style.id = 'user-location-marker-style';
+      style.textContent = `
+        @keyframes user-location-pulse {
+          0% { transform: scale(0.75); opacity: 0.55; }
+          70% { transform: scale(1.3); opacity: 0.08; }
+          100% { transform: scale(0.75); opacity: 0.55; }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    if (!userMarkerRef.current) {
+      const el = document.createElement('div');
+      el.innerHTML = `
+        <div style="
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          pointer-events: none;
+        ">
+          <div style="
+            position: absolute;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: rgba(33, 150, 243, 0.16);
+            border: 1px solid rgba(33, 150, 243, 0.24);
+            animation: user-location-pulse 1.8s ease-out infinite;
+          "></div>
+          <div style="
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #2196F3;
+            border: 3px solid white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 3px 10px rgba(33,150,243,0.45);
+            z-index: 1;
+          ">
+            <div style="
+              width: 8px;
+              height: 8px;
+              border-radius: 50%;
+              background: white;
+            "></div>
+          </div>
+          <div style="
+            background: #1976D2;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            margin-top: 4px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+            white-space: nowrap;
+            z-index: 1;
+          ">Konumum</div>
+        </div>
+      `;
+
+      userMarkerRef.current = new mapboxgl.Marker({ element: el })
+        .setLngLat([userLocation.lng, userLocation.lat])
+        .addTo(map);
+      return;
+    }
+
+    userMarkerRef.current.setLngLat([userLocation.lng, userLocation.lat]);
+  }, [userLocation]);
 
   return (
     <View style={styles.container}>
