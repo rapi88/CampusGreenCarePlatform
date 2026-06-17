@@ -297,9 +297,6 @@ export default function AdminNotificationTestScreen() {
               <Text style={styles.hintText}>{(broadcastMutation.data.data as any).hint}</Text>
             </View>
           )}
-
-            </View>
-          )}
         </View>
 
         {/* Section 4: Trigger Cron */}
