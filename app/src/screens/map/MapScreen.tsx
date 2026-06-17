@@ -49,6 +49,10 @@ export default function MapScreen() {
     setViewMode,
     filterStatus,
     setFilterStatus,
+    filterOwnership,
+    setFilterOwnership,
+    mapStyle,
+    toggleMapStyle,
     selectedTreeId,
     setSelectedTree,
     isAddingTree,
@@ -112,6 +116,15 @@ export default function MapScreen() {
     },
   });
 
+  const { data: myTrees } = useQuery({
+    queryKey: ["myTrees"],
+    queryFn: async () => {
+      const res = await treesApi.getMyTrees();
+      return res.data;
+    },
+    enabled: !!user,
+  });
+
   // Admin Create Tree Mutation
   const createTreeMutation = useMutation({
     mutationFn: (data: Partial<Tree>) => adminApi.createTree(data),
@@ -148,11 +161,21 @@ export default function MapScreen() {
   }));
 
   const filtered = processedTrees.filter((t) => {
+    // 1. Search text match
     const matchSearch =
       t.name.toLowerCase().includes(search.toLowerCase()) ||
       t.location.toLowerCase().includes(search.toLowerCase());
-    const matchFilter = !filterStatus || t.hydrationStatus === filterStatus;
-    return matchSearch && matchFilter;
+      
+    // 2. Hydration status match
+    const matchStatus = !filterStatus || t.hydrationStatus === filterStatus;
+    
+    // 3. Ownership match
+    let matchOwnership = true;
+    if (filterOwnership === 'mine' && myTrees) {
+      matchOwnership = myTrees.adopted.some((adoptedTree) => adoptedTree.id === t.id);
+    }
+    
+    return matchSearch && matchStatus && matchOwnership;
   });
 
   const selectedTree =
@@ -264,14 +287,34 @@ export default function MapScreen() {
         </View>
       )}
 
-      {/* Filter chips */}
+      {/* Filters Row */}
       {!(isAddingTree || isSuggestingTree) && (
-        <ScrollView
+        <View>
+          <ScrollView
           horizontal
           showsHorizontalScrollIndicator={true}
           style={styles.filterScroll}
           contentContainerStyle={styles.filters}
         >
+          {user && (
+            <TouchableOpacity
+              style={[
+                styles.filterChip,
+                filterOwnership === 'mine' && styles.filterChipActive,
+              ]}
+              onPress={() => setFilterOwnership(filterOwnership === 'mine' ? 'all' : 'mine')}
+            >
+              <Text
+                style={[
+                  styles.filterText,
+                  filterOwnership === 'mine' && styles.filterTextActive,
+                ]}
+              >
+                🌲 Ağaçlarım
+              </Text>
+            </TouchableOpacity>
+          )}
+
           {[null, "watered", "needs_water"].map((s) => (
             <TouchableOpacity
               key={String(s)}
@@ -296,6 +339,7 @@ export default function MapScreen() {
             </TouchableOpacity>
           ))}
         </ScrollView>
+        </View>
       )}
 
       {/* Map view — real Mapbox */}
@@ -312,7 +356,20 @@ export default function MapScreen() {
             onMapClick={handleMapClick}
             maxBounds={USE_NEW_MAP_LIMITS ? CAMPUS_BOUNDS : undefined}
             followUserLocation={USE_NEW_MAP_LIMITS}
+            mapStyle={mapStyle}
           />
+
+          {/* Map Style Toggle */}
+          {!(isAddingTree || isSuggestingTree) && (
+            <TouchableOpacity 
+              style={styles.mapStyleToggle} 
+              onPress={toggleMapStyle}
+            >
+              <Text style={styles.mapStyleToggleText}>
+                {mapStyle === 'outdoors' ? '🛰️ Uydu' : '🗺️ Harita'}
+              </Text>
+            </TouchableOpacity>
+          )}
 
           {/* Bottom preview card */}
           {!(isAddingTree || isSuggestingTree) && selectedTree && (
@@ -499,6 +556,22 @@ const styles = StyleSheet.create({
   filterTextActive: { color: Colors.greenDark, fontWeight: "600" },
   // Map
   mapContainer: { flex: 1, position: "relative" },
+  // Map Style Toggle
+  mapStyleToggle: {
+    position: 'absolute',
+    top: Spacing.md,
+    right: Spacing.md,
+    backgroundColor: Colors.white,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: Radius.full,
+    ...Shadow.card,
+  },
+  mapStyleToggleText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.neutralDark,
+  },
   // Preview card
   previewCard: {
     position: "absolute",

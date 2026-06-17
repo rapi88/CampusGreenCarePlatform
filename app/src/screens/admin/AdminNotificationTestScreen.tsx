@@ -20,9 +20,6 @@ export default function AdminNotificationTestScreen() {
   const [selectedTree, setSelectedTree] = useState<Tree | null>(null);
   const [showTreePicker, setShowTreePicker] = useState(false);
   const [localPending, setLocalPending] = useState(false);
-  const [lastReceiptIds, setLastReceiptIds] = useState<string[]>([]);
-  const [receiptResult, setReceiptResult] = useState<any>(null);
-  const [receiptPending, setReceiptPending] = useState(false);
 
   const { data: statusResp, isLoading: statusLoading, refetch: refetchStatus } = useQuery({
     queryKey: ['debug', 'token-status'],
@@ -65,8 +62,6 @@ export default function AdminNotificationTestScreen() {
     mutationFn: () => debugApi.broadcastTest(),
     onSuccess: (res) => {
       const d = res.data;
-      setLastReceiptIds(d.receiptIds ?? []);
-      setReceiptResult(null);
       const type = d.rejected > 0 && d.accepted === 0 ? 'error' : 'success';
       Toast.show({ type, text1: '📢 Toplu Gönderim Sonucu', text2: d.message });
     },
@@ -80,21 +75,7 @@ export default function AdminNotificationTestScreen() {
   });
 
   const anyPending = selfTestMutation.isPending || reminderSelfMutation.isPending ||
-    reminderAdoptersMutation.isPending || broadcastMutation.isPending || cronMutation.isPending || localPending || receiptPending;
-
-  const checkReceipts = async () => {
-    if (lastReceiptIds.length === 0) return;
-    setReceiptPending(true);
-    setReceiptResult(null);
-    try {
-      const res = await debugApi.checkReceipts(lastReceiptIds);
-      setReceiptResult(res.data);
-    } catch (e: any) {
-      Toast.show({ type: 'error', text1: 'Teslimat kontrolu başarısız', text2: e?.response?.data?.message ?? 'Hata' });
-    } finally {
-      setReceiptPending(false);
-    }
-  };
+    reminderAdoptersMutation.isPending || broadcastMutation.isPending || cronMutation.isPending || localPending;
 
   const sendLocalNotification = async (title: string, body: string, data?: Record<string, any>) => {
     setLocalPending(true);
@@ -317,35 +298,6 @@ export default function AdminNotificationTestScreen() {
             </View>
           )}
 
-          {/* Receipt check — available after broadcast returns receiptIds */}
-          {lastReceiptIds.length > 0 && (
-            <ScaleButton
-              style={[styles.actionBtn, styles.actionBtnNeutral, anyPending && styles.btnDisabled]}
-              onPress={checkReceipts}
-              disabled={anyPending}
-            >
-              {receiptPending
-                ? <ActivityIndicator color={Colors.white} />
-                : <Text style={styles.actionBtnText}>🔍 Teslimat Kayıtlarini Kontrol Et (gönderimden ~30 sn sonra)</Text>}
-            </ScaleButton>
-          )}
-
-          {/* Receipt result */}
-          {receiptResult && (
-            <View style={styles.resultBox}>
-              <View style={styles.resultRow}>
-                <Text style={styles.resultKey}>APNs Teslim Edildi</Text>
-                <Text style={[styles.resultVal, { color: Colors.greenPrimary }]}>{receiptResult.delivered}</Text>
-              </View>
-              <View style={styles.resultRow}>
-                <Text style={styles.resultKey}>APNs Başarısız</Text>
-                <Text style={[styles.resultVal, receiptResult.failed > 0 && { color: Colors.error }]}>{receiptResult.failed}</Text>
-              </View>
-              {(receiptResult.errors ?? []).map((e: any, i: number) => (
-                <View key={i} style={styles.errorRow}>
-                  <Text style={styles.errorText}>❌ {e.errorCode}: {e.message}</Text>
-                </View>
-              ))}
             </View>
           )}
         </View>
