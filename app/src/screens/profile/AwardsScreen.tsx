@@ -7,6 +7,8 @@ import {
   ScrollView,
   TextInput,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Colors } from "../../theme/colors";
@@ -69,78 +71,94 @@ export default function AwardsScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>🏆 Ödüller</Text>
       </View>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
-        {/* Award display */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Haftanın En Çok Sulayanı 💧</Text>
-          <Text style={styles.cardSubtitle}>
-            Kampüsümüzü yeşillendiren gönüllülerimize teşekkür ederiz!
-          </Text>
-          {isLoading ? (
-            <ActivityIndicator
-              color={Colors.greenPrimary}
-              style={{ marginVertical: Spacing.xl }}
-            />
-          ) : topWatererPhotoUrl ? (
-            <View style={styles.imageContainer}>
-              <Image
-                source={{ uri: topWatererPhotoUrl }}
-                style={styles.image}
-                resizeMode="cover"
+      <KeyboardAvoidingView
+        style={styles.keyboard}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.content}
+          keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
+        >
+          {/* Award display */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Haftanın En Çok Sulayanı 💧</Text>
+            <Text style={styles.cardSubtitle}>
+              Kampüsümüzü yeşillendiren gönüllülerimize teşekkür ederiz!
+            </Text>
+            {isLoading ? (
+              <ActivityIndicator
+                color={Colors.greenPrimary}
+                style={{ marginVertical: Spacing.xl }}
               />
-              {displayText ? (
-                <View style={styles.textOverlay}>
-                  <Text style={styles.overlayText}>{displayText}</Text>
-                </View>
-              ) : null}
-            </View>
-          ) : (
-            <View style={styles.placeholder}>
-              <Text style={styles.placeholderText}>
-                Henüz fotoğraf paylaşılmadı.
-              </Text>
+            ) : topWatererPhotoUrl ? (
+              <View style={styles.imageContainer}>
+                <Image
+                  source={{ uri: topWatererPhotoUrl }}
+                  style={styles.image}
+                  resizeMode="cover"
+                />
+                {displayText ? (
+                  <View style={styles.textOverlay}>
+                    <Text style={styles.overlayText}>{displayText}</Text>
+                  </View>
+                ) : null}
+              </View>
+            ) : (
+              <View style={styles.placeholder}>
+                <Text style={styles.placeholderText}>
+                  Henüz fotoğraf paylaşılmadı.
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Admin-only award editor */}
+          {isAdmin && (
+            <View style={styles.editorCard}>
+              <Text style={styles.editorTitle}>⚙️ Haftanın Ödülünü Güncelle</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Fotoğraf URL'sini yapıştırın..."
+                value={awardUrl}
+                onChangeText={setAwardUrl}
+                autoCapitalize="none"
+                autoCorrect={false}
+                placeholderTextColor={Colors.neutralMid}
+              />
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder="Ödülde görünecek metin..."
+                value={awardText}
+                onChangeText={setAwardText}
+                multiline
+                textAlignVertical="top"
+                placeholderTextColor={Colors.neutralMid}
+              />
+              <ScaleButton
+                style={styles.saveBtn}
+                onPress={() => updateAwardMutation.mutate()}
+                disabled={updateAwardMutation.isPending}
+              >
+                {updateAwardMutation.isPending ? (
+                  <ActivityIndicator color={Colors.white} />
+                ) : (
+                  <Text style={styles.saveBtnText}>💾 Ödülü Kaydet</Text>
+                )}
+              </ScaleButton>
             </View>
           )}
-        </View>
-
-        {/* Admin-only award editor */}
-        {isAdmin && (
-          <View style={styles.editorCard}>
-            <Text style={styles.editorTitle}>⚙️ Haftanın Ödülünü Güncelle</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Fotoğraf URL'sini yapıştırın..."
-              value={awardUrl}
-              onChangeText={setAwardUrl}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            <TextInput
-              style={styles.input}
-              placeholder="Ödülde goruneçek metin..."
-              value={awardText}
-              onChangeText={setAwardText}
-            />
-            <ScaleButton
-              style={styles.saveBtn}
-              onPress={() => updateAwardMutation.mutate()}
-              disabled={updateAwardMutation.isPending}
-            >
-              {updateAwardMutation.isPending ? (
-                <ActivityIndicator color={Colors.white} />
-              ) : (
-                <Text style={styles.saveBtnText}>💾 Ödülü Kaydet</Text>
-              )}
-            </ScaleButton>
-          </View>
-        )}
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.neutralBg },
+  keyboard: { flex: 1 },
   scroll: { flex: 1 },
   header: {
     padding: Spacing.md,
@@ -221,8 +239,12 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md,
     padding: Spacing.sm,
     fontSize: 14,
+    color: Colors.neutralDark,
     borderWidth: 1,
     borderColor: Colors.neutralLight,
+  },
+  textArea: {
+    minHeight: 88,
   },
   saveBtn: {
     backgroundColor: Colors.greenPrimary,

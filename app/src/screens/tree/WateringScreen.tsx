@@ -26,7 +26,7 @@ import { haversineDistance } from "../../utils/geo";
 
 type Props = NativeStackScreenProps<TreeStackParamList, "Watering">;
 
-const THRESHOLD_M = 200; // Expanded to 200m for easier testing, in prod you might want 10m
+const THRESHOLD_M = 20; // Expanded to 200m for easier testing, in prod you might want 10m
 
 export default function WateringScreen({ route, navigation }: Props) {
   const { treeId } = route.params;
@@ -60,7 +60,9 @@ export default function WateringScreen({ route, navigation }: Props) {
   }, [treeResponse?.data?.latitude, treeResponse?.data?.longitude]);
 
   const isVolunteer = useMemo(() => {
-    return treeResponse?.data?.volunteers?.some((v) => v.id === user?.id) ?? false;
+    return (
+      treeResponse?.data?.volunteers?.some((v) => v.id === user?.id) ?? false
+    );
   }, [treeResponse?.data?.volunteers, user?.id]);
 
   const waterMutation = useMutation({
@@ -95,7 +97,8 @@ export default function WateringScreen({ route, navigation }: Props) {
     if (!treeResponse?.data) return;
 
     if (!isVolunteer) {
-      const message = "Bu ağacı sulayamazsınız. Bu ağacın gönüllüsü değilsiniz.";
+      const message =
+        "Bu ağacı sulayamazsınız. Bu ağacın gönüllüsü değilsiniz.";
       setErrorMessage(message);
       setShowVolunteerModal(true);
       setPhase("error");
@@ -118,7 +121,8 @@ export default function WateringScreen({ route, navigation }: Props) {
   const checkLocation = async () => {
     if (!treeCoords) return;
     if (!isVolunteer) {
-      const message = "Bu ağacı sulayamazsınız. Bu ağacın gönüllüsü değilsiniz.";
+      const message =
+        "Bu ağacı sulayamazsınız. Bu ağacın gönüllüsü değilsiniz.";
       setErrorMessage(message);
       setShowVolunteerModal(true);
       setPhase("error");
@@ -129,7 +133,9 @@ export default function WateringScreen({ route, navigation }: Props) {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
-        setErrorMessage("Konum izni verilmedi. Sulama yapabilmek için konum izni vermelisiniz.");
+        setErrorMessage(
+          "Konum izni verilmedi. Sulama yapabilmek için konum izni vermelisiniz.",
+        );
         setPhase("error");
         return;
       }
@@ -143,7 +149,9 @@ export default function WateringScreen({ route, navigation }: Props) {
       }
 
       if (!loc) {
-        setErrorMessage("Konum alınamadı. Lütfen cihaz konum servislerini kontrol edip tekrar deneyin.");
+        setErrorMessage(
+          "Konum alınamadı. Lütfen cihaz konum servislerini kontrol edip tekrar deneyin.",
+        );
         setPhase("error");
         return;
       }
@@ -158,7 +166,8 @@ export default function WateringScreen({ route, navigation }: Props) {
       setDistanceM(Math.round(dist));
       setPhase(dist <= THRESHOLD_M ? "ready" : "far");
     } catch (error: any) {
-      const message = error?.message || "Konum alınamadı. Lütfen tekrar deneyin.";
+      const message =
+        error?.message || "Konum alınamadı. Lütfen tekrar deneyin.";
       setErrorMessage(message);
       Toast.show({ type: "error", text1: "Konum alınamadı", text2: message });
       setPhase("error");
@@ -297,7 +306,9 @@ export default function WateringScreen({ route, navigation }: Props) {
         }}
       >
         <View style={styles.modalOverlay}>
-          <Animated.View style={[styles.modalBox, { transform: [{ scale: scaleAnim }] }]}>
+          <Animated.View
+            style={[styles.modalBox, { transform: [{ scale: scaleAnim }] }]}
+          >
             <View style={[styles.modalIconCircle, styles.successIconCircle]}>
               <Text style={styles.modalIcon}>🌱</Text>
             </View>
@@ -336,7 +347,12 @@ const styles = StyleSheet.create({
   back: { color: Colors.greenPrimary, fontSize: 16, fontWeight: "500" },
   headerTitle: { fontSize: 16, fontWeight: "600", color: Colors.neutralDark },
   scroll: { flex: 1 },
-  body: { flexGrow: 1, padding: Spacing.lg, paddingBottom: 120, justifyContent: "center" },
+  body: {
+    flexGrow: 1,
+    padding: Spacing.lg,
+    paddingBottom: 120,
+    justifyContent: "center",
+  },
   center: { alignItems: "center" },
   statusText: { marginTop: Spacing.md, fontSize: 16, color: Colors.neutralMid },
   distanceCard: {

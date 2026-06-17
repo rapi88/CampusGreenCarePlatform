@@ -30,7 +30,7 @@ const HEALTH_OPTIONS: { value: 'Healthy' | 'Sick' | 'Critical'; label: string; e
 ];
 
 export default function AddTreeModal({ visible, coordinates, onClose, onSubmit, isSuggesting = false }: AddTreeModalProps) {
-  const { height: windowHeight } = useWindowDimensions();
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [name, setName] = useState('');
   const [species, setSpecies] = useState('');
@@ -66,9 +66,12 @@ export default function AddTreeModal({ visible, coordinates, onClose, onSubmit, 
     };
   }, [visible, windowHeight]);
 
+  const bottomInset = Math.max(insets.bottom, Spacing.sm);
+  const keyboardOffset = Math.max(0, keyboardHeight - insets.bottom);
+  const isCompact = windowWidth < 360;
   const modalMaxHeight = keyboardHeight > 0
-    ? Math.max(340, windowHeight - keyboardHeight - insets.top - Spacing.sm)
-    : Math.floor(windowHeight * 0.85);
+    ? Math.max(320, windowHeight - keyboardOffset - insets.top - Spacing.sm)
+    : Math.floor(windowHeight * 0.88);
 
   const handleSubmit = () => {
     const newErrors: typeof errors = {};
@@ -118,7 +121,7 @@ export default function AddTreeModal({ visible, coordinates, onClose, onSubmit, 
     >
       <View style={styles.overlay}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardView}
         >
           <View style={[styles.modalContainer, { maxHeight: modalMaxHeight }]}>
@@ -126,7 +129,9 @@ export default function AddTreeModal({ visible, coordinates, onClose, onSubmit, 
             <View style={styles.modalHeader}>
               <View style={styles.headerTitle}>
                 <Text style={styles.headerEmoji}>🌱</Text>
-                <Text style={styles.headerText}>{isSuggesting ? 'Ağaç Öner' : 'Yeni Ağaç Ekle'}</Text>
+                <Text style={styles.headerText} numberOfLines={1}>
+                  {isSuggesting ? 'Ağaç Öner' : 'Yeni Ağaç Ekle'}
+                </Text>
               </View>
               <TouchableOpacity style={styles.closeBtn} onPress={handleClose}>
                 <Text style={styles.closeBtnText}>✕</Text>
@@ -135,10 +140,15 @@ export default function AddTreeModal({ visible, coordinates, onClose, onSubmit, 
 
             <ScrollView
               style={styles.form}
-              contentContainerStyle={styles.formContent}
+              contentContainerStyle={[
+                styles.formContent,
+                { paddingBottom: keyboardHeight > 0 ? Spacing.lg : Spacing.sm },
+              ]}
               showsVerticalScrollIndicator
               keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
               keyboardShouldPersistTaps="handled"
+              automaticallyAdjustKeyboardInsets
+              nestedScrollEnabled
             >
               {/* Coordinates display */}
               {coordinates && (
@@ -219,12 +229,26 @@ export default function AddTreeModal({ visible, coordinates, onClose, onSubmit, 
             </ScrollView>
 
             {/* Actions */}
-            <View style={styles.actions}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={handleClose}>
+            <View
+              style={[
+                styles.actions,
+                isCompact && styles.actionsCompact,
+                { paddingBottom: keyboardHeight > 0 ? Spacing.md : bottomInset },
+              ]}
+            >
+              <TouchableOpacity
+                style={[styles.cancelBtn, isCompact && styles.actionBtnCompact]}
+                onPress={handleClose}
+              >
                 <Text style={styles.cancelBtnText}>İptal</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
-                <Text style={styles.submitBtnText}>{isSuggesting ? '🌟 Ağaç Öner' : '🌳 Ağaç Ekle'}</Text>
+              <TouchableOpacity
+                style={[styles.submitBtn, isCompact && styles.actionBtnCompact]}
+                onPress={handleSubmit}
+              >
+                <Text style={styles.submitBtnText} numberOfLines={1}>
+                  {isSuggesting ? '🌟 Ağaç Öner' : '🌳 Ağaç Ekle'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -261,12 +285,21 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.neutralLight,
   },
   headerTitle: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    minWidth: 0,
+    paddingRight: Spacing.sm,
   },
   headerEmoji: { fontSize: 24 },
-  headerText: { fontSize: 20, fontWeight: '700', color: Colors.neutralDark },
+  headerText: {
+    flex: 1,
+    minWidth: 0,
+    fontSize: 20,
+    fontWeight: '700',
+    color: Colors.neutralDark,
+  },
   closeBtn: {
     width: 32,
     height: 32,
@@ -295,7 +328,13 @@ const styles = StyleSheet.create({
   coordsIcon: { fontSize: 20 },
   coordsInfo: { flex: 1 },
   coordsLabel: { fontSize: 11, color: Colors.greenDark, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
-  coordsText: { fontSize: 13, color: Colors.neutralDark, fontWeight: '500', marginTop: 2 },
+  coordsText: {
+    fontSize: 13,
+    color: Colors.neutralDark,
+    fontWeight: '500',
+    marginTop: 2,
+    flexShrink: 1,
+  },
   fieldGroup: {
     marginBottom: Spacing.md,
   },
@@ -344,9 +383,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.lg,
+    paddingTop: Spacing.lg,
     borderTopWidth: 1,
     borderTopColor: Colors.neutralLight,
+  },
+  actionsCompact: {
+    flexDirection: 'column-reverse',
+  },
+  actionBtnCompact: {
+    flex: 0,
+    width: '100%',
   },
   cancelBtn: {
     flex: 1,

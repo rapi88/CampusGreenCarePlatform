@@ -31,13 +31,13 @@ import { treesApi, Tree } from "../../api/trees.api";
 import { adminApi } from "../../api/admin.api";
 import { extractError } from "../../utils/error";
 
-const INITIAL_CENTER: [number, number] = [29.361, 40.804]; // [lng, lat]
+const INITIAL_CENTER: [number, number] = [29.35769, 40.807147]; // [lng, lat]
 const INITIAL_ZOOM = 15;
 
-const USE_NEW_MAP_LIMITS = false; // Flag to toggle zoom limits and bounding box
+const USE_NEW_MAP_LIMITS = true; // Flag to toggle zoom limits and bounding box
 const CAMPUS_BOUNDS = {
-  ne: [29.38, 40.82] as [number, number],
-  sw: [29.34, 40.79] as [number, number],
+  ne: [29.371615, 40.815137] as [number, number],
+  sw: [29.338894, 40.798236] as [number, number],
 };
 
 const { width } = Dimensions.get("window");
