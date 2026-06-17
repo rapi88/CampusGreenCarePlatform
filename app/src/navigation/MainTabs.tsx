@@ -87,6 +87,7 @@ function TabNavigator() {
           height: 60,
           paddingBottom: 8,
         },
+        tabBarHideOnKeyboard: true,
         sceneStyle: styles.scene,
         tabBarLabel: ({ color }) => {
           const labels: Record<string, string> = {
