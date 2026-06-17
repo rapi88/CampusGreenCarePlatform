@@ -25,10 +25,11 @@ async function registerPushToken() {
       (Constants.expoConfig?.extra as any)?.eas?.projectId;
 
     if (!projectId) {
-      console.log('[Push] No projectId configured — skipping Expo push token. Run: npx eas init');
+      console.log('[Push] No projectId configured — skipping push token registration.');
       return;
     }
-    const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
+    // Directly get the native FCM/APNs token instead of Expo's routing token
+    const tokenData = await Notifications.getDevicePushTokenAsync();
     await authApi.registerPushToken(tokenData.data);
     console.log('[Push] Token registered:', tokenData.data);
   } catch (e) {
