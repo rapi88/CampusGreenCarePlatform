@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Image,
-  ActivityIndicator, Alert, Platform, ScrollView,
+  ActivityIndicator, Alert, Platform, ScrollView, KeyboardAvoidingView,
 } from 'react-native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
@@ -42,6 +43,7 @@ async function buildAvatarFormData(avatar: SelectedAvatar) {
 
 export default function EditProfileScreen() {
   const navigation = useNavigation<any>();
+  const tabBarHeight = useBottomTabBarHeight();
   const { user, updateUser } = useAuthStore();
   const [name, setName] = useState(user?.name ?? '');
   const [uploading, setUploading] = useState(false);
@@ -128,32 +130,42 @@ export default function EditProfileScreen() {
         <View style={{ width: 60 }} />
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
-        {/* Avatar */}
-        <TouchableOpacity style={styles.avatarWrapper} onPress={handlePickSource} disabled={uploading}>
-          {user?.avatarUrl ? (
-            <Image source={{ uri: user.avatarUrl }} style={styles.avatarImage} />
-          ) : (
-            <View style={styles.avatarCircle}>
-              <Text style={styles.avatarInitial}>{initial}</Text>
+      <KeyboardAvoidingView
+        style={styles.keyboard}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={[styles.body, { paddingBottom: tabBarHeight + Spacing.lg }]}
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Avatar */}
+          <TouchableOpacity style={styles.avatarWrapper} onPress={handlePickSource} disabled={uploading}>
+            {user?.avatarUrl ? (
+              <Image source={{ uri: user.avatarUrl }} style={styles.avatarImage} />
+            ) : (
+              <View style={styles.avatarCircle}>
+                <Text style={styles.avatarInitial}>{initial}</Text>
+              </View>
+            )}
+            <View style={styles.cameraOverlay}>
+              {uploading
+                ? <ActivityIndicator color={Colors.white} size="small" />
+                : <Text style={styles.cameraIcon}>📷</Text>}
             </View>
-          )}
-          <View style={styles.cameraOverlay}>
-            {uploading
-              ? <ActivityIndicator color={Colors.white} size="small" />
-              : <Text style={styles.cameraIcon}>📷</Text>}
-          </View>
-        </TouchableOpacity>
-        <Text style={styles.avatarHint}>Fotoğrafı değiştirmek için dokunun</Text>
+          </TouchableOpacity>
+          <Text style={styles.avatarHint}>Fotoğrafı değiştirmek için dokunun</Text>
 
-        {/* Name field — display only, no backend endpoint yet */}
-        <FormInput label="Ad Soyad" value={name} onChangeText={setName} />
-        <Text style={styles.fieldNote}>Ad değişiklikleri henüz sunucuya kaydedilmiyor.</Text>
+          {/* Name field - display only, no backend endpoint yet */}
+          <FormInput label="Ad Soyad" value={name} onChangeText={setName} />
+          <Text style={styles.fieldNote}>Ad değişiklikleri henüz sunucuya kaydedilmiyor.</Text>
 
-        <ScaleButton style={styles.saveBtn} onPress={() => navigation.goBack()}>
-          <Text style={styles.saveBtnText}>Tamam</Text>
-        </ScaleButton>
-      </ScrollView>
+          <ScaleButton style={styles.saveBtn} onPress={() => navigation.goBack()}>
+            <Text style={styles.saveBtnText}>Tamam</Text>
+          </ScaleButton>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -166,8 +178,9 @@ const styles = StyleSheet.create({
   },
   back: { color: Colors.greenPrimary, fontSize: 16, fontWeight: '500' },
   headerTitle: { fontSize: 16, fontWeight: '600', color: Colors.neutralDark },
+  keyboard: { flex: 1 },
   scroll: { flex: 1 },
-  body: { flexGrow: 1, padding: Spacing.lg, paddingBottom: 120, alignItems: 'center' },
+  body: { flexGrow: 1, padding: Spacing.lg, alignItems: 'center' },
 
   // Avatar
   avatarWrapper: { position: 'relative', marginBottom: 8, marginTop: Spacing.lg },
