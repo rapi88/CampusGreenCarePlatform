@@ -2,8 +2,8 @@ import { ExpoConfig, ConfigContext } from 'expo/config';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: 'app',
-  slug: 'app',
+  name: 'Campus Green Care',
+  slug: 'campusgreencare',
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/applogo.png',
@@ -15,10 +15,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   ios: {
     supportsTablet: true,
-    bundleIdentifier: 'com.anonymous.app',
+    bundleIdentifier: 'com.campusgreencare.app',
   },
   android: {
-    package: 'com.anonymous.app',
+    package: 'com.campusgreencare.app',
+    googleServicesFile: './google-services.json',
+    navigationBar: {
+      backgroundColor: '#000000',
+      barStyle: 'light-content',
+    },
     adaptiveIcon: {
       backgroundColor: '#E6F4FE',
       foregroundImage: './assets/applogo.png',

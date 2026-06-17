@@ -16,6 +16,4 @@ router.get('/notify/status', debugController.getTokenStatus);
 router.post('/notify/self', debugController.sendSelfTest);
 router.post('/notify/watering-reminder', debugController.sendWateringReminderForTree);
 router.post('/notify/broadcast', debugController.broadcastTest);
-router.post('/notify/receipts', debugController.checkReceipts);
-
 export default router;
