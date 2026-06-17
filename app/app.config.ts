@@ -20,16 +20,16 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     package: 'com.campusgreencare.app',
     googleServicesFile: './google-services.json',
-    navigationBar: {
-      backgroundColor: '#000000',
-      barStyle: 'light-content',
-    },
     adaptiveIcon: {
       backgroundColor: '#E6F4FE',
       foregroundImage: './assets/applogo.png',
       backgroundImage: './assets/android-icon-background.png',
       monochromeImage: './assets/android-icon-monochrome.png',
     },
+  },
+  androidNavigationBar: {
+    backgroundColor: '#000000',
+    barStyle: 'light-content',
   },
   web: {
     favicon: './assets/applogo.png',
