@@ -1,12 +1,12 @@
 // AddTreeModal — modal form for admin to add a new tree at a map location
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, Modal, TouchableOpacity, TextInput,
-  ScrollView, KeyboardAvoidingView, Platform,
+  ScrollView, KeyboardAvoidingView, Platform, Keyboard, useWindowDimensions,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../../theme/colors';
 import { Spacing, Radius, Shadow } from '../../theme/spacing';
-import { TreeStatus } from '../../store/map.store';
 
 interface AddTreeModalProps {
   visible: boolean;
@@ -30,11 +30,45 @@ const HEALTH_OPTIONS: { value: 'Healthy' | 'Sick' | 'Critical'; label: string; e
 ];
 
 export default function AddTreeModal({ visible, coordinates, onClose, onSubmit, isSuggesting = false }: AddTreeModalProps) {
+  const { height: windowHeight } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const [name, setName] = useState('');
   const [species, setSpecies] = useState('');
   const [location, setLocation] = useState('');
   const [health, setHealth] = useState<'Healthy' | 'Sick' | 'Critical'>('Healthy');
   const [errors, setErrors] = useState<{ name?: string; species?: string; location?: string }>({});
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    if (!visible) {
+      setKeyboardHeight(0);
+      return undefined;
+    }
+
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillChangeFrame' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSubscription = Keyboard.addListener(showEvent, (event) => {
+      const nextKeyboardHeight = Platform.OS === 'ios'
+        ? Math.max(0, windowHeight - (event.endCoordinates?.screenY ?? windowHeight))
+        : event.endCoordinates?.height ?? 0;
+
+      setKeyboardHeight(nextKeyboardHeight);
+    });
+
+    const hideSubscription = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, [visible, windowHeight]);
+
+  const modalMaxHeight = keyboardHeight > 0
+    ? Math.max(340, windowHeight - keyboardHeight - insets.top - Spacing.sm)
+    : Math.floor(windowHeight * 0.85);
 
   const handleSubmit = () => {
     const newErrors: typeof errors = {};
@@ -84,10 +118,10 @@ export default function AddTreeModal({ visible, coordinates, onClose, onSubmit, 
     >
       <View style={styles.overlay}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.keyboardView}
         >
-          <View style={styles.modalContainer}>
+          <View style={[styles.modalContainer, { maxHeight: modalMaxHeight }]}>
             {/* Header */}
             <View style={styles.modalHeader}>
               <View style={styles.headerTitle}>
@@ -99,7 +133,13 @@ export default function AddTreeModal({ visible, coordinates, onClose, onSubmit, 
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
+            <ScrollView
+              style={styles.form}
+              contentContainerStyle={styles.formContent}
+              showsVerticalScrollIndicator
+              keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+              keyboardShouldPersistTaps="handled"
+            >
               {/* Coordinates display */}
               {coordinates && (
                 <View style={styles.coordsCard}>
@@ -208,7 +248,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderTopLeftRadius: Radius.xl,
     borderTopRightRadius: Radius.xl,
-    maxHeight: '85%',
     ...Shadow.modal,
   },
   modalHeader: {
@@ -240,6 +279,9 @@ const styles = StyleSheet.create({
   form: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
+  },
+  formContent: {
+    paddingBottom: Spacing.sm,
   },
   coordsCard: {
     flexDirection: 'row',

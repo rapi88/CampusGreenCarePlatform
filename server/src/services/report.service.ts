@@ -49,11 +49,14 @@ export const reportService = {
 
     return events.map((e) => ({
       id: e.id,
-      tree: e.tree.name,
+      treeName: e.tree.name,
+      tree: { name: e.tree.name, location: e.tree.location },
       treeLocation: e.tree.location,
-      user: e.user.name,
+      userName: e.user.name,
+      user: { name: e.user.name, email: e.user.email },
       userEmail: e.user.email,
       date: e.createdAt.toISOString(),
+      wateredAt: e.createdAt.toISOString(),
       gpsVerified: e.gpsVerified,
     }));
   },

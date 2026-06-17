@@ -2,6 +2,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { StyleSheet, Text } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '../theme/colors';
 import { useAuthStore } from '../store/auth.store';
 
@@ -73,7 +74,10 @@ function ProfileNavigator() {
 
 function TabNavigator() {
   const user = useAuthStore((s) => s.user);
+  const insets = useSafeAreaInsets();
   const isAdmin = user?.role === 'ADMIN';
+  const tabBarBottomPadding = Math.max(insets.bottom, 8);
+  const tabBarHeight = 56 + tabBarBottomPadding;
 
   return (
     <Tab.Navigator
@@ -84,8 +88,12 @@ function TabNavigator() {
         tabBarStyle: {
           backgroundColor: Colors.white,
           borderTopColor: Colors.neutralLight,
-          height: 60,
-          paddingBottom: 8,
+          height: tabBarHeight,
+          paddingTop: 4,
+          paddingBottom: tabBarBottomPadding,
+        },
+        tabBarItemStyle: {
+          paddingVertical: 2,
         },
         tabBarHideOnKeyboard: true,
         sceneStyle: styles.scene,
