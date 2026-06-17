@@ -28,6 +28,7 @@ interface MapboxMapProps {
   onMapClick?: (coords: { lat: number; lng: number }) => void;
   maxBounds?: { ne: [number, number]; sw: [number, number] };
   followUserLocation?: boolean;
+  userLocation?: { lat: number; lng: number; accuracy?: number | null } | null;
 }
 
 const statusColors: Record<string, string> = {
@@ -47,6 +48,7 @@ export default function MapboxMap({
   onMapClick,
   maxBounds,
   followUserLocation,
+  userLocation,
 }: MapboxMapProps) {
   const cameraRef = useRef<Camera>(null);
 
@@ -91,7 +93,19 @@ export default function MapboxMap({
         followUserLocation={followUserLocation}
         followZoomLevel={followUserLocation ? initialZoom : undefined}
       />
-      {followUserLocation && <Mapbox.UserLocation />}
+
+      {/* Live user location marker */}
+      {userLocation && (
+        <MarkerView coordinate={[userLocation.lng, userLocation.lat]}>
+          <View style={styles.userMarkerContainer}>
+            <View style={styles.userAccuracyRing} />
+            <View style={styles.userDot}>
+              <View style={styles.userDotInner} />
+            </View>
+            <Text style={styles.userLabel}>Konumum</Text>
+          </View>
+        </MarkerView>
+      )}
 
       {/* Tree markers */}
       {trees.map((tree) => (
@@ -211,5 +225,49 @@ const styles = StyleSheet.create({
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
     borderTopColor: Colors.greenDark,
+  },
+  userMarkerContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingBottom: 4,
+  },
+  userAccuracyRing: {
+    position: 'absolute',
+    top: -10,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(33, 150, 243, 0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(33, 150, 243, 0.24)',
+  },
+  userDot: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#2196F3',
+    borderWidth: 3,
+    borderColor: Colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Shadow.modal,
+  },
+  userDotInner: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.white,
+  },
+  userLabel: {
+    fontSize: 10,
+    color: Colors.white,
+    fontWeight: '700',
+    backgroundColor: '#1976D2',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginTop: 4,
+    overflow: 'hidden',
+    ...Shadow.card,
   },
 });

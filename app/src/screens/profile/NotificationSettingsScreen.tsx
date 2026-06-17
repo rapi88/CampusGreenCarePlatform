@@ -9,6 +9,7 @@ import {
   ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useNavigation } from "@react-navigation/native";
 import { Colors } from "../../theme/colors";
 import { Spacing, Radius, Shadow } from "../../theme/spacing";
@@ -28,6 +29,7 @@ const SETTINGS = [
 
 export default function NotificationSettingsScreen() {
   const navigation = useNavigation<any>();
+  const tabBarHeight = useBottomTabBarHeight();
   const [enabled, setEnabled] = useState<Record<string, boolean>>({
     watering: true,
     chat: true,
@@ -42,7 +44,10 @@ export default function NotificationSettingsScreen() {
         <Text style={styles.headerTitle}>🔔 Bildirim Ayarları</Text>
         <View style={{ width: 60 }} />
       </View>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[styles.content, { paddingBottom: tabBarHeight + Spacing.md }]}
+      >
         <View style={styles.section}>
           {SETTINGS.map((s, i) => (
             <View
@@ -82,7 +87,7 @@ const styles = StyleSheet.create({
   back: { color: Colors.greenPrimary, fontSize: 16, fontWeight: "500" },
   headerTitle: { fontSize: 16, fontWeight: "600", color: Colors.neutralDark },
   scroll: { flex: 1 },
-  content: { flexGrow: 1, padding: Spacing.md, paddingBottom: 120 },
+  content: { flexGrow: 1, padding: Spacing.md },
   section: {
     backgroundColor: Colors.white,
     borderRadius: Radius.xl,

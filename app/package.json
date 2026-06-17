@@ -4,9 +4,14 @@
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
+    "dev": "expo start --dev-client",
+    "dev:clear": "expo start --dev-client --clear",
     "android": "expo run:android",
-    "ios": "expo run:ios",
-    "web": "expo start --web"
+    "ios": "expo run:ios --device \"iPhone 17\"",
+    "android:dev-build": "expo run:android",
+    "ios:dev-build": "expo run:ios --device \"iPhone 17\"",
+    "web": "expo start --web",
+    "postinstall": "node scripts/patch-react-native-gradle-plugin.js"
   },
   "dependencies": {
     "@expo/metro-runtime": "~55.0.11",
