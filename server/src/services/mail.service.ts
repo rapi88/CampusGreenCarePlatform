@@ -12,7 +12,11 @@ const smtpFrom =
 const publicApiUrl =
   process.env.PUBLIC_API_URL ||
   process.env.API_URL ||
-  `http://localhost:${config.port || 3000}`;
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : `http://localhost:${config.port || 3000}`);
 
 const isSmtpConfigured = Boolean(smtpHost && smtpUser && smtpPass);
 
