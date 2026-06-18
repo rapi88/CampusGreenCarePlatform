@@ -28,4 +28,5 @@ export const authApi = {
   me: () => api.get<User>('/auth/me'),
   registerPushToken: (expoPushToken: string) => api.post<{ message: string }>('/auth/push-token', { expoPushToken }),
   uploadAvatar: (formData: FormData) => api.put<{ message: string; avatarUrl: string }>('/auth/avatar', formData),
+  updateProfile: (data: { name: string }) => api.put<{ message: string; user: User }>('/auth/profile', data),
 };

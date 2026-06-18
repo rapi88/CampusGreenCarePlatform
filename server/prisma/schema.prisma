@@ -1,4 +1,3 @@
-// Prisma schema for Campus Green Care Platform
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,7 +7,127 @@ datasource db {
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
-// ── Enums ──────────────────────────────────────────────
+
+model User {
+  id             String           @id @default(uuid())
+  name           String
+  email          String           @unique
+  passwordHash   String
+  role           Role             @default(USER)
+  points         Int              @default(0)
+  avatarUrl      String?
+  expoPushToken  String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  isVerified     Boolean          @default(false)
+  verifyToken    String?
+  adoptions      Adoption[]
+  chatMessages   ChatMessage[]
+  notes          TreeNote[]
+  suggestions    TreeSuggestion[]
+  wateringEvents WateringEvent[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model Tree {
+  id                 String          @id @default(uuid())
+  name               String
+  species            String
+  latitude           Float
+  longitude          Float
+  location           String
+  photoPath          String?
+  estimatedAge       Int             @default(0)
+  height             Float           @default(0)
+  plantingDate       DateTime?
+  wateringPeriodDays Int             @default(3)
+  isNaturalMonument  Boolean         @default(false)
+  health             Health          @default(HEALTHY)
+  maxVolunteers      Int             @default(4)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  status             TreeStatus      @default(ACTIVE)
+  adoptions          Adoption[]
+  chatMessages       ChatMessage[]
+  notes              TreeNote[]
+  suggestion         TreeSuggestion?
+  wateringEvents     WateringEvent[]
+
+  @@index([latitude, longitude])
+}
+
+model Adoption {
+  id        String   @id @default(uuid())
+  userId    String
+  treeId    String
+  createdAt DateTime @default(now())
+  tree      Tree     @relation(fields: [treeId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, treeId])
+  @@index([userId])
+  @@index([treeId])
+}
+
+model TreeSuggestion {
+  id              String   @id @default(uuid())
+  treeId          String   @unique
+  userId          String
+  dismissed       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  rejectionReason String?
+  tree            Tree     @relation(fields: [treeId], references: [id], onDelete: Cascade)
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model WateringEvent {
+  id            String   @id @default(uuid())
+  userId        String
+  treeId        String
+  latitude      Float
+  longitude     Float
+  gpsVerified   Boolean  @default(false)
+  pointsAwarded Int      @default(10)
+  createdAt     DateTime @default(now())
+  tree          Tree     @relation(fields: [treeId], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([treeId, createdAt(sort: Desc)])
+  @@index([userId])
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  treeId    String
+  userId    String
+  text      String
+  createdAt DateTime @default(now())
+  tree      Tree     @relation(fields: [treeId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([treeId, createdAt])
+}
+
+model TreeNote {
+  id        String   @id @default(uuid())
+  treeId    String
+  userId    String
+  text      String
+  createdAt DateTime @default(now())
+  tree      Tree     @relation(fields: [treeId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([treeId, createdAt])
+}
+
+model Setting {
+  key   String @id
+  value String
+}
 
 enum Role {
   USER
@@ -23,137 +142,7 @@ enum TreeStatus {
 }
 
 enum Health {
-  HEALTHY  // Sağlıklı
-  SICK     // Hasta
-  CRITICAL // Kritik
-}
-
-// ── Models ─────────────────────────────────────────────
-
-model User {
-  id            String   @id @default(uuid())
-  name          String
-  email         String   @unique
-  passwordHash  String
-  isVerified    Boolean  @default(false)
-  verifyToken   String?
-  role          Role     @default(USER)
-  points        Int      @default(0)
-  avatarUrl     String?
-  expoPushToken String?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  adoptions      Adoption[]
-  wateringEvents WateringEvent[]
-  chatMessages   ChatMessage[]
-  notes          TreeNote[]
-  suggestions    TreeSuggestion[]
-
-  @@index([email])
-  @@index([role])
-}
-
-model Tree {
-  id                 String   @id @default(uuid())
-  name               String
-  species            String
-  latitude           Float
-  longitude          Float
-  location           String   // Human-readable description (e.g. "Merkezi Avlu, Sektör A")
-  photoPath          String?  // Supabase Storage public URL
-  estimatedAge       Int      @default(0)
-  height             Float    @default(0)
-  plantingDate       DateTime?
-  wateringPeriodDays Int      @default(3)
-  status             TreeStatus @default(ACTIVE)
-  isNaturalMonument  Boolean  @default(false)
-  health             Health   @default(HEALTHY)
-  maxVolunteers      Int      @default(4)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-
-  adoptions      Adoption[]
-  wateringEvents WateringEvent[]
-  chatMessages   ChatMessage[]
-  notes          TreeNote[]
-  suggestion     TreeSuggestion?
-
-  @@index([latitude, longitude])
-}
-
-model Adoption {
-  id        String   @id @default(uuid())
-  userId    String
-  treeId    String
-  createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tree Tree @relation(fields: [treeId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, treeId])
-  @@index([userId])
-  @@index([treeId])
-}
-
-model TreeSuggestion {
-  id              String   @id @default(uuid())
-  treeId          String   @unique
-  userId          String
-  dismissed       Boolean  @default(false)
-  rejectionReason String?
-  createdAt       DateTime @default(now())
-
-  tree Tree @relation(fields: [treeId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-}
-
-model WateringEvent {
-  id            String   @id @default(uuid())
-  userId        String
-  treeId        String
-  latitude      Float
-  longitude     Float
-  gpsVerified   Boolean  @default(false)
-  pointsAwarded Int      @default(10)
-  createdAt     DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tree Tree @relation(fields: [treeId], references: [id], onDelete: Cascade)
-
-  @@index([treeId, createdAt(sort: Desc)])
-  @@index([userId])
-}
-
-model ChatMessage {
-  id        String   @id @default(uuid())
-  treeId    String
-  userId    String
-  text      String
-  createdAt DateTime @default(now())
-
-  tree Tree @relation(fields: [treeId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([treeId, createdAt])
-}
-
-model TreeNote {
-  id        String   @id @default(uuid())
-  treeId    String
-  userId    String
-  text      String
-  createdAt DateTime @default(now())
-
-  tree Tree @relation(fields: [treeId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([treeId, createdAt])
-}
-
-model Setting {
-  key   String @id
-  value String
+  HEALTHY
+  SICK
+  CRITICAL
 }

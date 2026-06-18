@@ -222,4 +222,19 @@ export const authService = {
     });
     return { message: 'Push token saved' };
   },
+
+  async updateProfile(userId: string, updates: { name?: string }) {
+    if (updates.name && updates.name.trim().length === 0) {
+      throw new BadRequestError('Name cannot be empty');
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(updates.name ? { name: updates.name.trim() } : {}),
+      },
+    });
+
+    return formatUserResponse(updatedUser.id);
+  },
 };

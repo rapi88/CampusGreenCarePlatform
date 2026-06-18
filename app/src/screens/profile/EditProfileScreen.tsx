@@ -47,8 +47,9 @@ export default function EditProfileScreen() {
   const { user, updateUser } = useAuthStore();
   const [name, setName] = useState(user?.name ?? '');
   const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const initial = (user?.name ?? 'U').charAt(0).toUpperCase();
+  const initial = (name || user?.name || 'U').charAt(0).toUpperCase();
 
   const pickImage = async (source: 'library' | 'camera') => {
     try {
@@ -100,9 +101,9 @@ export default function EditProfileScreen() {
       const formData = await buildAvatarFormData(avatar);
       const res = await authApi.uploadAvatar(formData);
       updateUser({ avatarUrl: res.data.avatarUrl });
-      Toast.show({ type: 'success', text1: 'Fotoğraf güncellendi', text2: 'Profil fotoğrafınız kaydedildi.' });
+      Toast.show({ type: 'success', text1: 'Fotoğraf güncellendi', text2: 'Profil fotoğrafınız başarıyla kaydedildi.' });
     } catch (e: any) {
-      Toast.show({ type: 'error', text1: 'Yükleme başarısız', text2: e?.response?.data?.message ?? 'Tekrar deneyin.' });
+      Toast.show({ type: 'error', text1: 'Yükleme başarısız', text2: e?.response?.data?.message ?? 'Lütfen tekrar deneyin.' });
     } finally {
       setUploading(false);
     }
@@ -113,17 +114,40 @@ export default function EditProfileScreen() {
       pickImage('library');
       return;
     }
-    Alert.alert('Profil Fotoğrafını Değiştir', undefined, [
-      { text: 'Fotoğraf Cek', onPress: () => pickImage('camera') },
+    Alert.alert('Profil Fotoğrafını Değiştir', 'Nereden seçmek istersiniz?', [
+      { text: 'Fotoğraf Çek', onPress: () => pickImage('camera') },
       { text: 'Galeriden Seç', onPress: () => pickImage('library') },
       { text: 'İptal', style: 'cancel' },
     ]);
   };
 
+  const handleSave = async () => {
+    if (!name.trim()) {
+      Toast.show({ type: 'error', text1: 'Hata', text2: 'Ad soyad alanı boş bırakılamaz.' });
+      return;
+    }
+    if (name === user?.name) {
+      navigation.goBack();
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const res = await authApi.updateProfile({ name: name.trim() });
+      updateUser({ name: res.data.user.name });
+      Toast.show({ type: 'success', text1: 'Başarılı', text2: 'Profil bilgileriniz güncellendi.' });
+      navigation.goBack();
+    } catch (e: any) {
+      Toast.show({ type: 'error', text1: 'Kaydetme başarısız', text2: e?.response?.data?.message ?? 'Tekrar deneyin.' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Text style={styles.back}>‹ Geri</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Profili Düzenle</Text>
@@ -140,29 +164,57 @@ export default function EditProfileScreen() {
           keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Avatar */}
-          <TouchableOpacity style={styles.avatarWrapper} onPress={handlePickSource} disabled={uploading}>
-            {user?.avatarUrl ? (
-              <Image source={{ uri: user.avatarUrl }} style={styles.avatarImage} />
-            ) : (
-              <View style={styles.avatarCircle}>
-                <Text style={styles.avatarInitial}>{initial}</Text>
-              </View>
-            )}
-            <View style={styles.cameraOverlay}>
-              {uploading
-                ? <ActivityIndicator color={Colors.white} size="small" />
-                : <Text style={styles.cameraIcon}>📷</Text>}
+          {/* Form Card */}
+          <View style={styles.card}>
+            {/* Avatar */}
+            <View style={styles.avatarSection}>
+              <TouchableOpacity style={styles.avatarWrapper} onPress={handlePickSource} disabled={uploading}>
+                {user?.avatarUrl ? (
+                  <Image source={{ uri: user.avatarUrl }} style={styles.avatarImage} />
+                ) : (
+                  <View style={styles.avatarCircle}>
+                    <Text style={styles.avatarInitial}>{initial}</Text>
+                  </View>
+                )}
+                <View style={styles.cameraOverlay}>
+                  {uploading
+                    ? <ActivityIndicator color={Colors.white} size="small" />
+                    : <Text style={styles.cameraIcon}>📷</Text>}
+                </View>
+              </TouchableOpacity>
+              <Text style={styles.avatarHint}>Fotoğrafı değiştirmek için dokunun</Text>
             </View>
-          </TouchableOpacity>
-          <Text style={styles.avatarHint}>Fotoğrafı değiştirmek için dokunun</Text>
 
-          {/* Name field - display only, no backend endpoint yet */}
-          <FormInput label="Ad Soyad" value={name} onChangeText={setName} />
-          <Text style={styles.fieldNote}>Ad değişiklikleri henüz sunucuya kaydedilmiyor.</Text>
+            {/* Inputs */}
+            <View style={styles.inputSection}>
+              <FormInput 
+                label="Ad Soyad" 
+                value={name} 
+                onChangeText={setName} 
+                placeholder="Örn: Ahmet Yılmaz"
+                autoCapitalize="words"
+              />
+              
+              <FormInput 
+                label="E-posta" 
+                value={user?.email ?? ''} 
+                editable={false} 
+                style={styles.disabledInput}
+              />
+              <Text style={styles.fieldNote}>E-posta adresi değiştirilemez.</Text>
+            </View>
+          </View>
 
-          <ScaleButton style={styles.saveBtn} onPress={() => navigation.goBack()}>
-            <Text style={styles.saveBtnText}>Tamam</Text>
+          <ScaleButton 
+            style={[styles.saveBtn, saving && styles.saveBtnDisabled]} 
+            onPress={handleSave} 
+            disabled={saving || uploading}
+          >
+            {saving ? (
+              <ActivityIndicator color={Colors.white} />
+            ) : (
+              <Text style={styles.saveBtnText}>Değişiklikleri Kaydet</Text>
+            )}
           </ScaleButton>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -175,35 +227,53 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     padding: Spacing.md, backgroundColor: Colors.white,
+    borderBottomWidth: 1, borderBottomColor: Colors.neutralLight,
   },
-  back: { color: Colors.greenPrimary, fontSize: 16, fontWeight: '500' },
-  headerTitle: { fontSize: 16, fontWeight: '600', color: Colors.neutralDark },
+  backBtn: { padding: Spacing.xs },
+  back: { color: Colors.greenPrimary, fontSize: 16, fontWeight: '600' },
+  headerTitle: { fontSize: 17, fontWeight: '700', color: Colors.neutralDark },
   keyboard: { flex: 1 },
   scroll: { flex: 1 },
-  body: { flexGrow: 1, padding: Spacing.lg, alignItems: 'center' },
+  body: { flexGrow: 1, padding: Spacing.md, paddingTop: Spacing.lg },
+
+  card: {
+    backgroundColor: Colors.white,
+    borderRadius: Radius.xl,
+    padding: Spacing.lg,
+    ...Shadow.card,
+    marginBottom: Spacing.xl,
+  },
 
   // Avatar
-  avatarWrapper: { position: 'relative', marginBottom: 8, marginTop: Spacing.lg },
-  avatarImage: { width: 100, height: 100, borderRadius: 50 },
+  avatarSection: { alignItems: 'center', marginBottom: Spacing.xl },
+  avatarWrapper: { position: 'relative', marginBottom: 12 },
+  avatarImage: { width: 110, height: 110, borderRadius: 55, borderWidth: 3, borderColor: Colors.greenLight },
   avatarCircle: {
-    width: 100, height: 100, borderRadius: 50, backgroundColor: Colors.greenPrimary,
+    width: 110, height: 110, borderRadius: 55, backgroundColor: Colors.greenPrimary,
     alignItems: 'center', justifyContent: 'center',
+    borderWidth: 3, borderColor: Colors.greenLight,
   },
-  avatarInitial: { fontSize: 40, fontWeight: '700', color: Colors.white },
+  avatarInitial: { fontSize: 44, fontWeight: '800', color: Colors.white },
   cameraOverlay: {
-    position: 'absolute', bottom: 0, right: 0,
-    width: 32, height: 32, borderRadius: 16,
+    position: 'absolute', bottom: 2, right: 2,
+    width: 34, height: 34, borderRadius: 17,
     backgroundColor: Colors.neutralDark, alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, borderColor: Colors.white,
+    ...Shadow.sm,
   },
   cameraIcon: { fontSize: 16 },
-  avatarHint: { fontSize: 12, color: Colors.neutralMid, marginBottom: Spacing.xl },
+  avatarHint: { fontSize: 13, color: Colors.neutralMid, fontWeight: '500' },
 
-  fieldNote: { fontSize: 11, color: Colors.neutralMid, alignSelf: 'flex-start', marginTop: -Spacing.sm, marginBottom: Spacing.md },
+  // Inputs
+  inputSection: { gap: 4 },
+  disabledInput: { color: Colors.neutralMid, backgroundColor: '#F8F9FA' },
+  fieldNote: { fontSize: 12, color: Colors.neutralMid, marginTop: -10, marginBottom: Spacing.md },
 
   saveBtn: {
-    width: '100%', backgroundColor: Colors.greenPrimary, borderRadius: Radius.md,
-    height: 52, alignItems: 'center', justifyContent: 'center', marginTop: Spacing.sm,
+    width: '100%', backgroundColor: Colors.greenPrimary, borderRadius: Radius.lg,
+    height: 56, alignItems: 'center', justifyContent: 'center',
+    ...Shadow.md,
   },
-  saveBtnText: { color: Colors.white, fontSize: 16, fontWeight: '700' },
+  saveBtnDisabled: { opacity: 0.7 },
+  saveBtnText: { color: Colors.white, fontSize: 16, fontWeight: '700', letterSpacing: 0.3 },
 });

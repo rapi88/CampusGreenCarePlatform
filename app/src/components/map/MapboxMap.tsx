@@ -110,18 +110,8 @@ export default function MapboxMap({
         followUserLocation={followUserLocation}
         followZoomLevel={followUserLocation ? initialZoom : undefined}
       />
-      {/* Live user location marker */}
-      {userLocation && (
-        <MarkerView coordinate={[userLocation.lng, userLocation.lat]}>
-          <View style={styles.userMarkerContainer}>
-            <View style={styles.userAccuracyRing} />
-            <View style={styles.userDot}>
-              <View style={styles.userDotInner} />
-            </View>
-            <Text style={styles.userLabel}>Konumum</Text>
-          </View>
-        </MarkerView>
-      )}
+      {/* Live user location marker handled natively by Mapbox GL to prevent Android MarkerView vanishing bug */}
+      <Mapbox.UserLocation visible={true} showsUserHeadingIndicator={false} />
 
       {/* Tree markers */}
       {trees.map((tree) => {
