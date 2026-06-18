@@ -8,6 +8,8 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import ScaleButton from "../../components/common/ScaleButton";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -56,68 +58,82 @@ export default function LoginScreen({ navigation }: Props) {
   };
 
   return (
-    <ScrollView
-      style={styles.scroll}
-      contentContainerStyle={styles.container}
-      keyboardShouldPersistTaps="handled"
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.logoWrap}>
-          <Image
-            source={require("../../assets/applogo1.png")}
-            style={styles.logoImage}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        automaticallyAdjustKeyboardInsets
+        nestedScrollEnabled
+        scrollEnabled
+        bounces
+        alwaysBounceVertical
+        showsVerticalScrollIndicator
+        contentInsetAdjustmentBehavior="automatic"
+        overScrollMode="always"
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.logoWrap}>
+            <Image
+              source={require("../../assets/applogo1.png")}
+              style={styles.logoImage}
+            />
+          </View>
+          <Text style={styles.title}>Hoşgeldin!!</Text>
+          <Text style={styles.subtitle}>GTÜ Kampüs Yeşil Bakım Platformu</Text>
+        </View>
+
+        {/* Form */}
+        <View style={styles.form}>
+          <FormInput
+            label="GTU E-posta"
+            placeholder="name.surname@gtu.edu.tr"
+            keyboardType="email-address"
+            value={email}
+            onChangeText={setEmail}
+            error={emailError}
           />
-        </View>
-        <Text style={styles.title}>Hoş geldin</Text>
-        <Text style={styles.subtitle}>GTÜ Kampüs Yeşil Bakım Platformu</Text>
-      </View>
+          <FormInput
+            label="Şifre"
+            placeholder="Şifrenizi girin"
+            isPassword
+            value={password}
+            onChangeText={setPassword}
+          />
 
-      {/* Form */}
-      <View style={styles.form}>
-        <FormInput
-          label="GTU E-posta"
-          placeholder="name.surname@gtu.edu.tr"
-          keyboardType="email-address"
-          value={email}
-          onChangeText={setEmail}
-          error={emailError}
-        />
-        <FormInput
-          label="Şifre"
-          placeholder="Şifrenizi girin"
-          isPassword
-          value={password}
-          onChangeText={setPassword}
-        />
-
-        <TouchableOpacity
-          onPress={() => navigation.navigate("ForgotPassword")}
-          style={styles.forgotLink}
-        >
-          <Text style={styles.link}>Şifrenizi mi unuttunuz?</Text>
-        </TouchableOpacity>
-
-        <ScaleButton
-          style={[styles.btn, loading && styles.btnDisabled]}
-          onPress={handleLogin}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color={Colors.white} />
-          ) : (
-            <Text style={styles.btnText}>Giriş Yap</Text>
-          )}
-        </ScaleButton>
-
-        <View style={styles.registerRow}>
-          <Text style={styles.muted}>Hesabınız yok mu? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate("Register")}>
-            <Text style={styles.link}>Kayıt Ol</Text>
+          <TouchableOpacity
+            onPress={() => navigation.navigate("ForgotPassword")}
+            style={styles.forgotLink}
+          >
+            <Text style={styles.link}>Şifrenizi mi unuttunuz?</Text>
           </TouchableOpacity>
+
+          <ScaleButton
+            style={[styles.btn, loading && styles.btnDisabled]}
+            onPress={handleLogin}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color={Colors.white} />
+            ) : (
+              <Text style={styles.btnText}>Giriş Yap</Text>
+            )}
+          </ScaleButton>
+
+          <View style={styles.registerRow}>
+            <Text style={styles.muted}>Hesabınız yok mu? </Text>
+            <TouchableOpacity onPress={() => navigation.navigate("Register")}>
+              <Text style={styles.link}>Kayıt Ol</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

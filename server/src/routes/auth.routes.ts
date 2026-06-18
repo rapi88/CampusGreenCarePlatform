@@ -16,5 +16,6 @@ router.post('/reset-password', authController.resetPassword);
 router.get('/me', auth, authController.me);
 router.post('/push-token', auth, authController.registerPushToken);
 router.put('/avatar', auth, upload.single('avatar'), authController.uploadAvatar);
+router.put('/profile', auth, authController.updateProfile);
 
 export default router;

@@ -7,6 +7,8 @@ import {
   ScrollView,
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Colors } from "../../theme/colors";
@@ -86,96 +88,110 @@ export default function RegisterScreen({ navigation }: Props) {
   }
 
   return (
-    <ScrollView
-      style={styles.scroll}
-      contentContainerStyle={styles.container}
-      keyboardShouldPersistTaps="handled"
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
-        <Text style={styles.backText}>← Geri</Text>
-      </TouchableOpacity>
-      <Text style={styles.title}>Hesap Oluştur</Text>
-      <Text style={styles.subtitle}>GTÜ öğrenci hesabınızla kayıt olun</Text>
-
-      <FormInput
-        label="Ad Soyad"
-        placeholder="Adınız Soyadınız"
-        value={name}
-        onChangeText={setName}
-        error={errors.name}
-      />
-      <FormInput
-        label="GTU E-posta"
-        placeholder="ad.soyad@gtu.edu.tr"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
-        error={errors.email}
-      />
-      <FormInput
-        label="Şifre"
-        placeholder="Güçlü bir şifre seçin"
-        isPassword
-        value={password}
-        onChangeText={setPassword}
-        error={errors.password}
-      />
-
-      {/* Password strength bar */}
-      {password.length > 0 && (
-        <View style={styles.strengthRow}>
-          {(["weak", "fair", "strong"] as const).map((s, i) => (
-            <View
-              key={s}
-              style={[
-                styles.strengthBar,
-                {
-                  backgroundColor:
-                    i <= ["weak", "fair", "strong"].indexOf(strength)
-                      ? strengthColor
-                      : Colors.neutralLight,
-                },
-              ]}
-            />
-          ))}
-          <Text style={[styles.strengthLabel, { color: strengthColor }]}>
-            {strength === "weak"
-              ? "Zayif"
-              : strength === "fair"
-                ? "Orta"
-                : "Güçlü"}
-          </Text>
-        </View>
-      )}
-
-      <FormInput
-        label="Şifreyi Onayla"
-        placeholder="Şifrenizi tekrar girin"
-        isPassword
-        value={confirm}
-        onChangeText={setConfirm}
-        error={errors.confirm}
-      />
-
-      <TouchableOpacity
-        style={[styles.btn, loading && styles.btnDisabled]}
-        onPress={handleRegister}
-        disabled={loading}
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        automaticallyAdjustKeyboardInsets
+        nestedScrollEnabled
+        scrollEnabled
+        bounces
+        alwaysBounceVertical
+        showsVerticalScrollIndicator
+        contentInsetAdjustmentBehavior="automatic"
+        overScrollMode="always"
       >
-        {loading ? (
-          <ActivityIndicator color={Colors.white} />
-        ) : (
-          <Text style={styles.btnText}>Kayıt Ol</Text>
-        )}
-      </TouchableOpacity>
-
-      <View style={styles.loginRow}>
-        <Text style={styles.muted}>Zaten hesabınız var mi? </Text>
-        <TouchableOpacity onPress={() => navigation.navigate("Login")}>
-          <Text style={styles.link}>Giriş Yap</Text>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
+          <Text style={styles.backText}>← Geri</Text>
         </TouchableOpacity>
-      </View>
-    </ScrollView>
+        <Text style={styles.title}>Hesap Oluştur</Text>
+        <Text style={styles.subtitle}>GTÜ öğrenci hesabınızla kayıt olun</Text>
+
+        <FormInput
+          label="Ad Soyad"
+          placeholder="Adınız Soyadınız"
+          value={name}
+          onChangeText={setName}
+          error={errors.name}
+        />
+        <FormInput
+          label="GTU E-posta"
+          placeholder="ad.soyad@gtu.edu.tr"
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
+          error={errors.email}
+        />
+        <FormInput
+          label="Şifre"
+          placeholder="Güçlü bir şifre seçin"
+          isPassword
+          value={password}
+          onChangeText={setPassword}
+          error={errors.password}
+        />
+
+        {/* Password strength bar */}
+        {password.length > 0 && (
+          <View style={styles.strengthRow}>
+            {(["weak", "fair", "strong"] as const).map((s, i) => (
+              <View
+                key={s}
+                style={[
+                  styles.strengthBar,
+                  {
+                    backgroundColor:
+                      i <= ["weak", "fair", "strong"].indexOf(strength)
+                        ? strengthColor
+                        : Colors.neutralLight,
+                  },
+                ]}
+              />
+            ))}
+            <Text style={[styles.strengthLabel, { color: strengthColor }]}>
+              {strength === "weak"
+                ? "Zayif"
+                : strength === "fair"
+                  ? "Orta"
+                  : "Güçlü"}
+            </Text>
+          </View>
+        )}
+
+        <FormInput
+          label="Şifreyi Onayla"
+          placeholder="Şifrenizi tekrar girin"
+          isPassword
+          value={confirm}
+          onChangeText={setConfirm}
+          error={errors.confirm}
+        />
+
+        <TouchableOpacity
+          style={[styles.btn, loading && styles.btnDisabled]}
+          onPress={handleRegister}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color={Colors.white} />
+          ) : (
+            <Text style={styles.btnText}>Kayıt Ol</Text>
+          )}
+        </TouchableOpacity>
+
+        <View style={styles.loginRow}>
+          <Text style={styles.muted}>Zaten hesabınız var mi? </Text>
+          <TouchableOpacity onPress={() => navigation.navigate("Login")}>
+            <Text style={styles.link}>Giriş Yap</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

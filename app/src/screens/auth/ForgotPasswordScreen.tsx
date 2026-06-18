@@ -7,6 +7,8 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { Colors } from "../../theme/colors";
@@ -42,60 +44,74 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
   };
 
   return (
-    <ScrollView
-      style={styles.scroll}
-      contentContainerStyle={styles.container}
-      keyboardShouldPersistTaps="handled"
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
-        <Text style={styles.backText}>← Geri</Text>
-      </TouchableOpacity>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
+        automaticallyAdjustKeyboardInsets
+        nestedScrollEnabled
+        scrollEnabled
+        bounces
+        alwaysBounceVertical
+        showsVerticalScrollIndicator
+        contentInsetAdjustmentBehavior="automatic"
+        overScrollMode="always"
+      >
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.back}>
+          <Text style={styles.backText}>← Geri</Text>
+        </TouchableOpacity>
 
-      <View style={styles.content}>
-        <Text style={styles.icon}>🔐</Text>
-        <Text style={styles.title}>Şifremi Unuttum</Text>
-        <Text style={styles.desc}>
-          GTÜ e-posta adresinizi girin, size şifre sıfırlama bağlantısı
-          gönderelim.
-        </Text>
+        <View style={styles.content}>
+          <Text style={styles.icon}>🔐</Text>
+          <Text style={styles.title}>Şifremi Unuttum</Text>
+          <Text style={styles.desc}>
+            GTÜ e-posta adresinizi girin, size şifre sıfırlama bağlantısı
+            gönderelim.
+          </Text>
 
-        {!sent ? (
-          <>
-            <FormInput
-              label="GTU E-posta"
-              placeholder="name.surname@gtu.edu.tr"
-              keyboardType="email-address"
-              value={email}
-              onChangeText={setEmail}
-              error={emailError}
-            />
-            <TouchableOpacity
-              style={[styles.btn, loading && styles.btnDisabled]}
-              onPress={handleReset}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color={Colors.white} />
-              ) : (
-                <Text style={styles.btnText}>Şifreyi Sıfırla</Text>
-              )}
-            </TouchableOpacity>
-          </>
-        ) : (
-          <View style={styles.successBox}>
-            <Text style={styles.successText}>
-              Bağlantı gönderildi! Gelen kutunuzu kontrol edin.
-            </Text>
-            <TouchableOpacity
-              style={styles.btn}
-              onPress={() => navigation.navigate("Login")}
-            >
-              <Text style={styles.btnText}>Giriş Yap</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
-    </ScrollView>
+          {!sent ? (
+            <>
+              <FormInput
+                label="GTU E-posta"
+                placeholder="name.surname@gtu.edu.tr"
+                keyboardType="email-address"
+                value={email}
+                onChangeText={setEmail}
+                error={emailError}
+              />
+              <TouchableOpacity
+                style={[styles.btn, loading && styles.btnDisabled]}
+                onPress={handleReset}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color={Colors.white} />
+                ) : (
+                  <Text style={styles.btnText}>Şifreyi Sıfırla</Text>
+                )}
+              </TouchableOpacity>
+            </>
+          ) : (
+            <View style={styles.successBox}>
+              <Text style={styles.successText}>
+                Bağlantı gönderildi! Gelen kutunuzu kontrol edin.
+              </Text>
+              <TouchableOpacity
+                style={styles.btn}
+                onPress={() => navigation.navigate("Login")}
+              >
+                <Text style={styles.btnText}>Giriş Yap</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 

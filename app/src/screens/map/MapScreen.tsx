@@ -121,8 +121,8 @@ export default function MapScreen() {
         locationSubscriptionRef.current = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.Balanced,
-            distanceInterval: 5,
-            timeInterval: 3000,
+            distanceInterval: 15,
+            timeInterval: 5000,
           },
           (loc) => {
             if (isMounted) applyUserLocation(loc);
