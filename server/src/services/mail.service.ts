@@ -10,6 +10,7 @@ const smtpFrom =
   process.env.SMTP_FROM ||
   '"Campus Green Care" <noreply@campusgreencare.gtu.edu.tr>';
 const publicApiUrl =
+  process.env.VERCEL_API_URL ||
   process.env.PUBLIC_API_URL ||
   process.env.API_URL ||
   (process.env.VERCEL_PROJECT_PRODUCTION_URL
