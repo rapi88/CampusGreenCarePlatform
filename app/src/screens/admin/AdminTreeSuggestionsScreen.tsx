@@ -17,6 +17,8 @@ export default function AdminTreeSuggestionsScreen() {
   const { data: suggestionsResponse, isLoading } = useQuery({
     queryKey: ['admin', 'suggestions'],
     queryFn: () => adminApi.getSuggestions(),
+    refetchOnMount: 'always',
+    refetchInterval: 5000,
   });
 
   const approveMutation = useMutation({

@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "../../theme/colors";
 import { Spacing, Radius, Shadow } from "../../theme/spacing";
+import TreeSpeciesDropdown from "../tree/TreeSpeciesDropdown";
 
 interface AddTreeModalProps {
   visible: boolean;
@@ -221,26 +222,14 @@ export default function AddTreeModal({
               )}
             </View>
 
-            {/* Species */}
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>Tur *</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  errors.species ? styles.inputError : null,
-                ]}
-                placeholder="örn. Quercus alba"
-                value={species}
-                onChangeText={(t) => {
-                  setSpecies(t);
-                  setErrors((e) => ({ ...e, species: undefined }));
-                }}
-                placeholderTextColor={Colors.neutralMid}
-              />
-              {errors.species && (
-                <Text style={styles.errorText}>{errors.species}</Text>
-              )}
-            </View>
+            <TreeSpeciesDropdown
+              value={species}
+              error={errors.species}
+              onChange={(nextSpecies) => {
+                setSpecies(nextSpecies);
+                setErrors((e) => ({ ...e, species: undefined }));
+              }}
+            />
 
             {/* Location description */}
             <View style={styles.fieldGroup}>

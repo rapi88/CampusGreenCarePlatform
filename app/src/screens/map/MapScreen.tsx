@@ -9,6 +9,7 @@ import {
   FlatList,
   Dimensions,
   Image,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
@@ -30,6 +31,12 @@ import AddTreeModal from "../../components/map/AddTreeModal";
 import { treesApi, Tree } from "../../api/trees.api";
 import { adminApi } from "../../api/admin.api";
 import { extractError } from "../../utils/error";
+import {
+  hasMatchingTreeIdentity,
+  markTreeIdentitySubmitted,
+  unmarkTreeIdentitySubmitted,
+  wasTreeIdentitySubmitted,
+} from "../../utils/treeDuplicate";
 
 const INITIAL_CENTER: [number, number] = [29.35769, 40.807147]; // [lng, lat]
 const INITIAL_ZOOM = 15;
@@ -169,8 +176,12 @@ export default function MapScreen() {
   const finishTreeSubmitFlow = useCallback((message: string) => {
     queryClient.invalidateQueries({ queryKey: ["trees"] });
     queryClient.invalidateQueries({ queryKey: ["myTrees"] });
+    queryClient.invalidateQueries({ queryKey: ["my-trees"] });
+    queryClient.invalidateQueries({ queryKey: ["trees", "admin"] });
+    queryClient.invalidateQueries({ queryKey: ["admin", "suggestions"] });
     Toast.show({
       type: "success",
+      position: "top",
       text1: "Başarılı",
       text2: message,
     });
@@ -191,7 +202,8 @@ export default function MapScreen() {
   const createTreeMutation = useMutation({
     mutationFn: (data: Partial<Tree>) => adminApi.createTree(data),
     onSuccess: () => finishTreeSubmitFlow("Ağaç başarıyla eklendi"),
-    onError: (error) => {
+    onError: (error, variables) => {
+      unmarkTreeIdentitySubmitted(variables);
       Toast.show({
         type: "error",
         text1: "Hata",
@@ -202,8 +214,9 @@ export default function MapScreen() {
 
   const suggestTreeMutation = useMutation({
     mutationFn: (data: Partial<Tree>) => treesApi.suggest(data),
-    onSuccess: () => finishTreeSubmitFlow("Ağaç öneriniz admin onayına gönderildi."),
-    onError: (error) => {
+    onSuccess: () => finishTreeSubmitFlow("Ağaç önerinizin admin onayına gönderildi."),
+    onError: (error, variables) => {
+      unmarkTreeIdentitySubmitted(variables);
       Toast.show({
         type: "error",
         text1: "Hata",
@@ -299,14 +312,29 @@ export default function MapScreen() {
       latitude: data.lat,
       longitude: data.lng,
     };
+    const knownTrees = [
+      ...activeTrees,
+      ...(myTrees?.adopted ?? []),
+      ...(myTrees?.suggested ?? []),
+    ];
+    const isDuplicate =
+      wasTreeIdentitySubmitted(payload) ||
+      hasMatchingTreeIdentity(knownTrees, payload);
+
+    if (isDuplicate) {
+      Alert.alert("Ağaç zaten ekli", "Bu ağacı zaten eklediniz.");
+      return;
+    }
 
     if (isAddingTree) {
+      markTreeIdentitySubmitted(payload);
       setShowAddModal(false);
       setIsAddingTree(false);
       setPendingPin(null);
       setViewMode("map");
       createTreeMutation.mutate(payload);
     } else if (isSuggestingTree) {
+      markTreeIdentitySubmitted(payload);
       setShowAddModal(false);
       setIsSuggestingTree(false);
       setPendingPin(null);
