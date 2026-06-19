@@ -3,3 +3,8 @@ dist/
 .env
 public/uploads/trees/*
 !public/uploads/trees/.gitkeep
+
+# Firebase / Google service account credentials — NEVER commit these
+src/config/*firebase*.json
+src/config/*service-account*.json
+*.serviceAccount.json

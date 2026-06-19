@@ -70,22 +70,23 @@ app.use(errorHandler);
 
 // ── Start Server ─────────────────────────────────────────
 
-if (process.env.NODE_ENV !== 'production') {
-  app.listen(config.port, () => {
-    console.log(`
-    🌿 Campus Green Care Backend
-    ─────────────────────────────
-    🚀 Server running on port ${config.port}
-    📊 Environment: ${config.nodeEnv}
-    🗄️  Database: PostgreSQL
-    📦 Static files: /uploads
-    🔗 API base: http://localhost:${config.port}/api
-    ─────────────────────────────
-    `);
+// SmarterASP (and other PaaS) injects process.env.PORT dynamically.
+// We must always call app.listen() — not only in development.
+const port = process.env.PORT || config.port || 3000;
 
-    // Start cron scheduler for watering reminders locally
-    schedulerService.start();
-  });
-}
+app.listen(port, () => {
+  console.log(`
+  🌿 Campus Green Care Backend
+  ─────────────────────────────
+  🚀 Server running on port ${port}
+  📊 Environment: ${config.nodeEnv}
+  🗄️  Database: PostgreSQL
+  📦 Static files: /uploads
+  ─────────────────────────────
+  `);
+
+  // Start cron scheduler for watering reminders
+  schedulerService.start();
+});
 
 export default app;
