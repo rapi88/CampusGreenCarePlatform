@@ -32,10 +32,14 @@ export const mailService = {
     const verifyLink = `${publicApiUrl.replace(/\/$/, "")}/api/auth/verify?token=${encodeURIComponent(token)}`;
 
     const htmlTemplate = `
-      <div style="font-family: sans-serif; padding: 20px;">
-        <h2>Test Mesajı</h2>
-        <p>DEBUG MESSAGE: This is a test email without any links to check if spam filters are blocking it.</p>
-        <p>Gelen Token: ${token}</p>
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+        <h2 style="color: #2E7D32;">Hesabınızı Doğrulayın</h2>
+        <p>Campus Green Care Platform'a kayıt olduğunuz için teşekkürler.</p>
+        <p>Hesabınızı doğrulamak için lütfen aşağıdaki bağlantıya tıklayın. Eğer bağlantı tıklanmıyorsa, kopyalayıp tarayıcınızın adres çubuğuna yapıştırın:</p>
+        <p style="margin: 20px 0; padding: 15px; background: #f5f5f5; border-radius: 4px; word-break: break-all;">
+          <a href="${verifyLink}" style="color: #2E7D32;">${verifyLink}</a>
+        </p>
+        <p style="font-size: 12px; color: #777;">Eğer bu kaydı siz yapmadıysanız bu mesajı görmezden gelebilirsiniz.</p>
       </div>
     `;
 
