@@ -29,6 +29,7 @@ export default function LoginScreen({ navigation }: Props) {
   const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [needsVerification, setNeedsVerification] = useState(false);
   const { setAuth } = useAuthStore();
 
   const validate = () => {
@@ -48,10 +49,13 @@ export default function LoginScreen({ navigation }: Props) {
       await AsyncStorage.setItem("token", res.data.token);
       setAuth(res.data.user, res.data.token);
     } catch (err: any) {
-      Alert.alert(
-        "Giriş Hatasi",
-        err.response?.data?.message ?? "Bir hata oluştu.",
-      );
+      const msg = err.response?.data?.message ?? "Bir hata oluştu.";
+      if (msg.toLowerCase().includes("doğrulanmamış") || msg.toLowerCase().includes("kodunu")) {
+        setNeedsVerification(true);
+        Alert.alert("Doğrulama Gerekli", msg);
+      } else {
+        Alert.alert("Giriş Hatası", msg);
+      }
     } finally {
       setLoading(false);
     }
@@ -131,6 +135,14 @@ export default function LoginScreen({ navigation }: Props) {
               <Text style={styles.link}>Kayıt Ol</Text>
             </TouchableOpacity>
           </View>
+          
+          {needsVerification && (
+            <View style={[styles.registerRow, { marginTop: Spacing.sm }]}>
+              <TouchableOpacity onPress={() => navigation.navigate("VerifyCode", { email })}>
+                <Text style={styles.link}>Doğrulama kodunu girmek için tıklayın</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

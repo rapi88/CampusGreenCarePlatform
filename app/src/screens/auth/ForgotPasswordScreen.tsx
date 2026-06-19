@@ -24,7 +24,6 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
 
   const handleReset = async () => {
     if (!isGTUEmail(email)) {
@@ -35,7 +34,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
     setLoading(true);
     try {
       await authApi.forgotPassword(email);
-      setSent(true);
+      navigation.navigate("ResetPasswordCode", { email });
     } catch {
       Alert.alert("Hata", "Şifre sıfırlama istegi gönderilemedi.");
     } finally {
@@ -74,8 +73,6 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
             gönderelim.
           </Text>
 
-          {!sent ? (
-            <>
               <FormInput
                 label="GTU E-posta"
                 placeholder="name.surname@gtu.edu.tr"
@@ -95,20 +92,6 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
                   <Text style={styles.btnText}>Şifreyi Sıfırla</Text>
                 )}
               </TouchableOpacity>
-            </>
-          ) : (
-            <View style={styles.successBox}>
-              <Text style={styles.successText}>
-                Bağlantı gönderildi! Gelen kutunuzu kontrol edin.
-              </Text>
-              <TouchableOpacity
-                style={styles.btn}
-                onPress={() => navigation.navigate("Login")}
-              >
-                <Text style={styles.btnText}>Giriş Yap</Text>
-              </TouchableOpacity>
-            </View>
-          )}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -151,13 +134,4 @@ const styles = StyleSheet.create({
   },
   btnDisabled: { opacity: 0.6 },
   btnText: { color: Colors.white, fontSize: 16, fontWeight: "700" },
-  successBox: { alignItems: "center" },
-  successEmoji: { fontSize: 48, marginBottom: Spacing.md },
-  successText: {
-    fontSize: 15,
-    color: Colors.neutralMid,
-    textAlign: "center",
-    marginBottom: Spacing.lg,
-    lineHeight: 22,
-  },
 });

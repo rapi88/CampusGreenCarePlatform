@@ -31,7 +31,6 @@ export default function RegisterScreen({ navigation }: Props) {
   const [confirm, setConfirm] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
-  const [done, setDöne] = useState(false);
 
   const strength = passwordStrength(password);
   const strengthColor = {
@@ -58,7 +57,7 @@ export default function RegisterScreen({ navigation }: Props) {
     setLoading(true);
     try {
       await authApi.register({ name, email, password });
-      setDöne(true);
+      navigation.navigate("VerifyCode", { email });
     } catch (err: any) {
       Alert.alert(
         "Hata",
@@ -68,24 +67,6 @@ export default function RegisterScreen({ navigation }: Props) {
       setLoading(false);
     }
   };
-
-  if (done) {
-    return (
-      <View style={[styles.container, styles.center]}>
-        <Text style={styles.checkEmoji}>✉️</Text>
-        <Text style={styles.doneTitle}>E-postanızı kontrol edin!</Text>
-        <Text style={styles.doneText}>
-          GTU e-posta adresinize bir doğrulama bağlantısı gönderdik. Doğruladıktan sonra giriş yapabilirsiniz.
-        </Text>
-        <TouchableOpacity
-          style={[styles.btn, styles.doneBtn]}
-          onPress={() => navigation.navigate("Login")}
-        >
-          <Text style={styles.btnText}>Giriş Yap</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
 
   return (
     <KeyboardAvoidingView
@@ -244,19 +225,4 @@ const styles = StyleSheet.create({
   },
   muted: { color: Colors.neutralMid, fontSize: 14 },
   link: { color: Colors.greenPrimary, fontWeight: "600", fontSize: 14 },
-  checkEmoji: { fontSize: 64, marginBottom: Spacing.lg },
-  doneTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: Colors.neutralDark,
-    marginBottom: Spacing.sm,
-    textAlign: "center",
-  },
-  doneText: {
-    fontSize: 15,
-    color: Colors.neutralMid,
-    textAlign: "center",
-    marginBottom: Spacing.lg,
-    lineHeight: 22,
-  },
 });

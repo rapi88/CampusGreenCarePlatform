@@ -9,6 +9,16 @@ import { mailService } from './mail.service';
 const GTU_DOMAIN = '@gtu.edu.tr';
 const BCRYPT_ROUNDS = 12;
 
+function generateOTP(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+function getOTPExpiryTime(): Date {
+  const now = new Date();
+  now.setMinutes(now.getMinutes() + 10);
+  return now;
+}
+
 interface UserResponse {
   id: string;
   name: string;
@@ -75,7 +85,10 @@ export const authService = {
     }
 
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);
-    const verifyToken = jwt.sign({ email: normalizedEmail }, config.jwt.secret as string, { expiresIn: '1d' });
+    
+    const verifyCodeRaw = generateOTP();
+    const verifyCodeHash = await bcrypt.hash(verifyCodeRaw, BCRYPT_ROUNDS);
+    const verifyCodeExpiresAt = getOTPExpiryTime();
 
     const user = existing
       ? await prisma.user.update({
@@ -83,7 +96,8 @@ export const authService = {
           data: {
             name: name.trim(),
             passwordHash,
-            verifyToken,
+            verifyCode: verifyCodeHash,
+            verifyCodeExpiresAt
           },
         })
       : await prisma.user.create({
@@ -91,12 +105,13 @@ export const authService = {
             name: name.trim(),
             email: normalizedEmail,
             passwordHash,
-            verifyToken,
+            verifyCode: verifyCodeHash,
+            verifyCodeExpiresAt
           },
         });
 
     try {
-      await mailService.sendVerificationEmail(normalizedEmail, verifyToken);
+      await mailService.sendVerificationCode(normalizedEmail, verifyCodeRaw);
     } catch (error) {
       if (!existing) {
         await prisma.user.delete({ where: { id: user.id } });
@@ -105,7 +120,7 @@ export const authService = {
     }
 
     return {
-      message: 'Registration successful. Please check your email for the verification link.',
+      message: 'Registration successful. Please check your email for the verification code.',
       userId: user.id,
       verificationEmailSent: true,
     };
@@ -121,20 +136,7 @@ export const authService = {
     }
 
     if (!user.isVerified) {
-      let verifyToken = user.verifyToken;
-      if (!verifyToken) {
-        verifyToken = jwt.sign({ email: user.email }, config.jwt.secret as string, { expiresIn: '1d' });
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { verifyToken },
-        });
-      }
-      try {
-        await mailService.sendVerificationEmail(user.email, verifyToken);
-      } catch (error) {
-        console.error('[Email] Failed to resend verification email during login:', error);
-      }
-      throw new UnauthorizedError('Hesabınız henüz doğrulanmamış. Doğrulama e-postası e-posta adresinize tekrar gönderildi, lütfen gelen kutunuzu kontrol edin.');
+      throw new UnauthorizedError('Hesabınız henüz doğrulanmamış. Kayıt sırasında gönderilen doğrulama kodunu girin.');
     }
 
     const isValid = await bcrypt.compare(password, user.passwordHash);
@@ -152,31 +154,79 @@ export const authService = {
     return formatUserResponse(userId);
   },
 
-  async verifyEmail(token: string) {
-    let decoded;
-    try {
-      decoded = jwt.verify(token, config.jwt.secret as string) as { email: string };
-    } catch (e) {
-      throw new BadRequestError('Invalid or expired verification link');
-    }
-
-    const user = await prisma.user.findFirst({
-      where: { email: decoded.email, verifyToken: token }
+  async verifyCode(email: string, code: string) {
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await prisma.user.findUnique({
+      where: { email: normalizedEmail }
     });
 
     if (!user) {
-      throw new BadRequestError('Account already verified or invalid link');
+      throw new BadRequestError('User not found');
+    }
+
+    if (user.isVerified) {
+      throw new BadRequestError('Account is already verified');
+    }
+
+    if (!user.verifyCode || !user.verifyCodeExpiresAt || user.verifyCodeExpiresAt < new Date()) {
+      throw new BadRequestError('Verification code expired or invalid');
+    }
+
+    const isValid = await bcrypt.compare(code, user.verifyCode);
+    if (!isValid) {
+      throw new BadRequestError('Invalid verification code');
     }
 
     await prisma.user.update({
       where: { id: user.id },
       data: {
         isVerified: true,
-        verifyToken: null
+        verifyCode: null,
+        verifyCodeExpiresAt: null
       }
     });
 
     return { message: 'Account verified successfully. You can now log in.' };
+  },
+
+  async resendVerificationCode(email: string) {
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await prisma.user.findUnique({
+      where: { email: normalizedEmail }
+    });
+
+    if (!user) {
+      // Don't leak user existence
+      return { message: 'If the email is registered, a code has been sent.' };
+    }
+
+    if (user.isVerified) {
+      throw new BadRequestError('Account is already verified');
+    }
+
+    // Rate limiting: 60 seconds
+    if (user.verifyCodeExpiresAt) {
+      const timeSinceLastCode = 10 * 60 * 1000 - (user.verifyCodeExpiresAt.getTime() - Date.now()); // 10 min - remaining time
+      if (timeSinceLastCode < 60 * 1000) {
+         throw new BadRequestError('Lütfen yeni kod istemeden önce 60 saniye bekleyin.');
+      }
+    }
+
+    const verifyCodeRaw = generateOTP();
+    const verifyCodeHash = await bcrypt.hash(verifyCodeRaw, BCRYPT_ROUNDS);
+    const verifyCodeExpiresAt = getOTPExpiryTime();
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        verifyCode: verifyCodeHash,
+        verifyCodeExpiresAt
+      }
+    });
+
+    await mailService.sendVerificationCode(normalizedEmail, verifyCodeRaw);
+
+    return { message: 'A new verification code has been sent to your email.' };
   },
 
   async forgotPassword(email: string) {
@@ -187,15 +237,52 @@ export const authService = {
 
     // Always return success to prevent email enumeration
     if (user) {
-      const resetToken = jwt.sign(
-        { email: normalizedEmail, purpose: 'password-reset' },
-        config.jwt.secret as string,
-        { expiresIn: '1h' },
-      );
-      await mailService.sendPasswordResetEmail(normalizedEmail, resetToken);
+      const resetCodeRaw = generateOTP();
+      const resetCodeHash = await bcrypt.hash(resetCodeRaw, BCRYPT_ROUNDS);
+      const resetCodeExpiresAt = getOTPExpiryTime();
+
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          resetCode: resetCodeHash,
+          resetCodeExpiresAt
+        }
+      });
+      await mailService.sendPasswordResetCode(normalizedEmail, resetCodeRaw);
     }
 
     return { message: 'Password reset link sent to your email.' };
+  },
+
+  async verifyResetCode(email: string, code: string) {
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await prisma.user.findUnique({
+      where: { email: normalizedEmail }
+    });
+
+    if (!user || !user.resetCode || !user.resetCodeExpiresAt || user.resetCodeExpiresAt < new Date()) {
+      throw new BadRequestError('Invalid or expired reset code');
+    }
+
+    const isValid = await bcrypt.compare(code, user.resetCode);
+    if (!isValid) {
+      throw new BadRequestError('Invalid reset code');
+    }
+
+    // Generate a short-lived token to be used in the actual resetPassword call
+    const resetToken = jwt.sign(
+      { email: normalizedEmail, purpose: 'password-reset-verified' },
+      config.jwt.secret as string,
+      { expiresIn: '5m' }
+    );
+
+    // Clean up reset code
+    await prisma.user.update({
+        where: { id: user.id },
+        data: { resetCode: null, resetCodeExpiresAt: null }
+    });
+
+    return { resetToken, message: 'Code verified successfully.' };
   },
 
   async resetPassword(token: string, password: string) {
@@ -207,16 +294,16 @@ export const authService = {
     try {
       decoded = jwt.verify(token, config.jwt.secret as string) as { email: string; purpose?: string };
     } catch {
-      throw new BadRequestError('Invalid or expired password reset link');
+      throw new BadRequestError('Invalid or expired password reset session');
     }
 
-    if (decoded.purpose !== 'password-reset') {
-      throw new BadRequestError('Invalid password reset link');
+    if (decoded.purpose !== 'password-reset-verified') {
+      throw new BadRequestError('Invalid password reset session');
     }
 
     const user = await prisma.user.findUnique({ where: { email: decoded.email } });
     if (!user) {
-      throw new BadRequestError('Invalid password reset link');
+      throw new BadRequestError('Invalid user');
     }
 
     const passwordHash = await bcrypt.hash(password, BCRYPT_ROUNDS);

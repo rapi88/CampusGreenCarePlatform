@@ -9,9 +9,10 @@ const router = Router();
 
 router.post('/login', authController.login);
 router.post('/register', authController.register);
-router.get('/verify', authController.verifyEmail);
+router.post('/verify-code', authController.verifyCode);
+router.post('/resend-code', authController.resendCode);
 router.post('/forgot-password', authController.forgotPassword);
-router.get('/reset-password', authController.resetPasswordPage);
+router.post('/verify-reset-code', authController.verifyResetCode);
 router.post('/reset-password', authController.resetPassword);
 router.get('/me', auth, authController.me);
 router.post('/push-token', auth, authController.registerPushToken);
