@@ -1,0 +1,23 @@
+# ─── JWT ────────────────────────────────────────────────
+JWT_SECRET="198378af5d9731461fb63ed1b2aadf8b93957e968338eb5f1ae64d9a8fecd335851a53b8f0a1e59828ba9170610911a1af39bd1f5dcfbace3a8ca551dc7961ab"
+JWT_EXPIRES_IN=7d
+
+# ─── Server ─────────────────────────────────────────────
+# PORT yazılmıyor — SmarterASP otomatik atıyor
+NODE_ENV=production
+PUBLIC_API_URL=http://habilgtu-001-site4.ctempurl.com
+CRON_SECRET="1cce525a-ef15-456b-b6a9-7aabfbb2cd75"
+
+# ─── Database — SmarterASP MySQL ─────────────────────────
+DATABASE_URL="mysql://ab2017_greencr:greenDB2026!@mysql6008.site4now.net:3306/db_ab2017_greencr"
+
+# ─── SMTP ───────────────────────────────────────────────
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=gtu.greencare@gmail.com
+SMTP_PASS=ygsy jmhp hafx odcx
+SMTP_FROM="Campus Green Care <gtu.greencare@gmail.com>"
+
+# ─── Expo Push Notifications ───────────────────────────
+EXPO_ACCESS_TOKEN="d1Q1mA3jnOn-mKGwkXmGyRKNrXoHRP9314i7Lg0e"
+NOTIFICATION_DEBUG=false

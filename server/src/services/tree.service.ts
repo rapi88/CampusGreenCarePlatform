@@ -25,7 +25,11 @@ function computeWateringStatus(lastWateredAt: Date | null, wateringPeriodDays: n
 
 function buildPhotoUrl(photoPath: string | null): string | undefined {
   if (!photoPath) return undefined;
-  return photoPath; // Frontend will just use this URL directly since it's now a full Supabase URL
+  if (photoPath.startsWith('http')) return photoPath;
+  
+  // Remove trailing slash from publicApiUrl just in case
+  const baseUrl = config.publicApiUrl.replace(/\/$/, '');
+  return `${baseUrl}${photoPath.startsWith('/') ? '' : '/'}${photoPath}`;
 }
 
 export const treeService = {
