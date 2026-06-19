@@ -121,7 +121,20 @@ export const authService = {
     }
 
     if (!user.isVerified) {
-      throw new UnauthorizedError('Your account is not verified. Please check your email.');
+      let verifyToken = user.verifyToken;
+      if (!verifyToken) {
+        verifyToken = jwt.sign({ email: user.email }, config.jwt.secret as string, { expiresIn: '1d' });
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { verifyToken },
+        });
+      }
+      try {
+        await mailService.sendVerificationEmail(user.email, verifyToken);
+      } catch (error) {
+        console.error('[Email] Failed to resend verification email during login:', error);
+      }
+      throw new UnauthorizedError('Hesabınız henüz doğrulanmamış. Doğrulama e-postası e-posta adresinize tekrar gönderildi, lütfen gelen kutunuzu kontrol edin.');
     }
 
     const isValid = await bcrypt.compare(password, user.passwordHash);

@@ -53,7 +53,7 @@ export const mailService = {
         subject: "Hesabınızı Doğrulayın - Campus Green Care 🌿",
         html: htmlTemplate,
       });
-      console.log("[Email] Verification email sent: %s", info.messageId);
+      console.log(`[Email] Verification email successfully sent to: ${to} (MessageID: ${info.messageId})`);
       return { sent: true, messageId: info.messageId };
     } catch (error) {
       console.error("[Email] Error sending verification email:", error);
@@ -95,7 +95,7 @@ export const mailService = {
         subject: "Şifre Sıfırlama - Campus Green Care",
         html: htmlTemplate,
       });
-      console.log("[Email] Password reset email sent: %s", info.messageId);
+      console.log(`[Email] Password reset email successfully sent to: ${to} (MessageID: ${info.messageId})`);
       return { sent: true, messageId: info.messageId };
     } catch (error) {
       console.error("[Email] Error sending password reset email:", error);
