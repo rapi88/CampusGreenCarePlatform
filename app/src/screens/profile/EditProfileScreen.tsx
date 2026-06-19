@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
     width: 34, height: 34, borderRadius: 17,
     backgroundColor: Colors.neutralDark, alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, borderColor: Colors.white,
-    ...Shadow.sm,
+    ...Shadow.card,
   },
   cameraIcon: { fontSize: 16 },
   avatarHint: { fontSize: 13, color: Colors.neutralMid, fontWeight: '500' },
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
   saveBtn: {
     width: '100%', backgroundColor: Colors.greenPrimary, borderRadius: Radius.lg,
     height: 56, alignItems: 'center', justifyContent: 'center',
-    ...Shadow.md,
+    ...Shadow.card,
   },
   saveBtnDisabled: { opacity: 0.7 },
   saveBtnText: { color: Colors.white, fontSize: 16, fontWeight: '700', letterSpacing: 0.3 },

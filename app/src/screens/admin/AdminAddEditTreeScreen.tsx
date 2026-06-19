@@ -1,6 +1,6 @@
 // Admin Add/Edit Tree form
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Switch, ActivityIndicator, Modal, Image, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Switch, ActivityIndicator, Modal, Image, KeyboardAvoidingView, Platform, Keyboard, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -14,6 +14,13 @@ import { treesApi, Tree } from '../../api/trees.api';
 import MapboxMap from '../../components/map/MapboxMap';
 import { useAuthStore } from '../../store/auth.store';
 import { extractError } from '../../utils/error';
+import TreeSpeciesDropdown from '../../components/tree/TreeSpeciesDropdown';
+import {
+  hasMatchingTreeIdentity,
+  markTreeIdentitySubmitted,
+  unmarkTreeIdentitySubmitted,
+  wasTreeIdentitySubmitted,
+} from '../../utils/treeDuplicate';
 
 type SelectedTreePhoto = {
   uri: string;
@@ -55,6 +62,8 @@ export default function AdminAddEditTreeScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const queryClient = useQueryClient();
+  const { height: windowHeight } = useWindowDimensions();
+  const scrollRef = useRef<ScrollView>(null);
   const user = useAuthStore((s) => s.user);
   const treeId = route.params?.treeId;
   const isEdit = !!treeId;
@@ -74,11 +83,30 @@ export default function AdminAddEditTreeScreen() {
   const [tempPin, setTempPin] = useState<{lat: number, lng: number} | null>(null);
   const [photo, setPhoto] = useState<SelectedTreePhoto | null>(null);
   const [existingPhotoUrl, setExistingPhotoUrl] = useState<string | null>(null);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   const { data: treeResponse, isLoading: isLoadingTree } = useQuery({
     queryKey: ['tree', treeId],
     queryFn: () => treesApi.getById(treeId),
     enabled: isEdit,
+  });
+
+  const { data: activeTrees = [] } = useQuery({
+    queryKey: ['trees'],
+    queryFn: async () => {
+      const res = await treesApi.getAll({ status: 'ACTIVE' });
+      return res.data;
+    },
+    enabled: !isEdit,
+  });
+
+  const { data: myTrees } = useQuery({
+    queryKey: ['myTrees'],
+    queryFn: async () => {
+      const res = await treesApi.getMyTrees();
+      return res.data;
+    },
+    enabled: !!user && !isEdit,
   });
 
   useEffect(() => {
@@ -97,10 +125,35 @@ export default function AdminAddEditTreeScreen() {
     }
   }, [treeResponse, isEdit]);
 
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillChangeFrame' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSubscription = Keyboard.addListener(showEvent, (event) => {
+      const keyboardTop = event.endCoordinates?.screenY;
+      const heightFromTop = typeof keyboardTop === 'number'
+        ? Math.max(0, windowHeight - keyboardTop)
+        : 0;
+      setKeyboardHeight(heightFromTop || event.endCoordinates?.height || 0);
+    });
+
+    const hideSubscription = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, [windowHeight]);
+
   const saveMutation = useMutation({
     mutationFn: async (data: Partial<Tree>) => {
       if (isSuggestionMode) {
         const saveResponse = await treesApi.suggest(data);
+        queryClient.invalidateQueries({ queryKey: ['admin', 'suggestions'] });
+        queryClient.invalidateQueries({ queryKey: ['my-trees'] });
+        queryClient.invalidateQueries({ queryKey: ['myTrees'] });
 
         if (photo) {
           const formData = await buildTreePhotoFormData(photo);
@@ -113,6 +166,8 @@ export default function AdminAddEditTreeScreen() {
       const saveResponse = isEdit
         ? await adminApi.updateTree(treeId, data)
         : await adminApi.createTree(data);
+      queryClient.invalidateQueries({ queryKey: ['trees'] });
+      queryClient.invalidateQueries({ queryKey: ['trees', 'admin'] });
 
       if (photo) {
         const formData = await buildTreePhotoFormData(photo);
@@ -123,18 +178,23 @@ export default function AdminAddEditTreeScreen() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trees'] });
+      queryClient.invalidateQueries({ queryKey: ['trees', 'admin'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'suggestions'] });
       queryClient.invalidateQueries({ queryKey: ['my-trees'] });
+      queryClient.invalidateQueries({ queryKey: ['myTrees'] });
       if (isEdit) queryClient.invalidateQueries({ queryKey: ['tree', treeId] });
       Toast.show({
         type: 'success',
+        position: 'top',
         text1: 'Başarılı',
         text2: isSuggestionMode
-          ? 'Ağaç öneriniz admin onayına gönderildi.'
+          ? 'Ağaç önerinizin admin onayına gönderildi.'
           : `Ağaç başarıyla ${isEdit ? 'güncellendi' : 'eklendi'}.`,
       });
-      navigation.goBack();
+      if (isEdit) navigation.goBack();
     },
-    onError: (error) => {
+    onError: (error, variables) => {
+      unmarkTreeIdentitySubmitted(variables);
       console.error('Tree save failed:', error);
       Toast.show({
         type: 'error',
@@ -145,14 +205,40 @@ export default function AdminAddEditTreeScreen() {
   });
 
   const pickPhoto = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('İzin gerekli', 'Ağaç fotoğrafı seçmek için galeri erişimi gerekir.');
+    if (Platform.OS === 'web') {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('İzin gerekli', 'Ağaç fotoğrafı seçmek için galeri erişimi gerekir.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.85,
+      });
+
+      if (result.canceled || !result.assets?.[0]) return;
+
+      const asset = result.assets[0];
+      const mimeType = asset.mimeType ?? 'image/jpeg';
+      const extension = mimeType.split('/')[1] || 'jpg';
+      setPhoto({
+        uri: asset.uri,
+        mimeType,
+        fileName: asset.fileName ?? `tree-photo.${extension}`,
+      });
       return;
     }
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('İzin gerekli', 'Ağaç fotoğrafı çekmek için kamera erişimi gerekir.');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.85,
@@ -177,9 +263,9 @@ export default function AdminAddEditTreeScreen() {
     }
 
     const basePayload = {
-      name,
-      species,
-      location,
+      name: name.trim(),
+      species: species.trim(),
+      location: location.trim(),
       latitude: parseFloat(latitude),
       longitude: parseFloat(longitude),
       estimatedAge: parseOptionalInteger(estimatedAge),
@@ -187,8 +273,34 @@ export default function AdminAddEditTreeScreen() {
       wateringPeriodDays: parseInt(wateringPeriodDays, 10),
     };
 
+    if (isEdit) {
+      saveMutation.mutate({
+        ...basePayload,
+        isNaturalMonument,
+        status: 'ACTIVE',
+      });
+      return;
+    }
+
+    const knownTrees = [
+      ...activeTrees,
+      ...(myTrees?.adopted ?? []),
+      ...(myTrees?.suggested ?? []),
+    ];
+    const isDuplicate =
+      wasTreeIdentitySubmitted(basePayload) ||
+      hasMatchingTreeIdentity(knownTrees, basePayload);
+
+    if (isDuplicate) {
+      Alert.alert('Ağaç zaten ekli', 'Bu ağacı zaten eklediniz.');
+      return;
+    }
+
+    markTreeIdentitySubmitted(basePayload);
+
     if (isSuggestionMode) {
       saveMutation.mutate(basePayload);
+      navigation.navigate('Tabs', { screen: 'MapTab' });
       return;
     }
 
@@ -197,6 +309,7 @@ export default function AdminAddEditTreeScreen() {
       isNaturalMonument,
       status: 'ACTIVE' // Admin created trees are ACTIVE directly
     });
+    navigation.navigate('Tabs', { screen: 'MapTab' });
   };
 
   const handleMapClick = (coords: {lat: number, lng: number}) => {
@@ -209,6 +322,12 @@ export default function AdminAddEditTreeScreen() {
       setLongitude(tempPin.lng.toFixed(6));
     }
     setShowMapModal(false);
+  };
+
+  const scrollToBottomField = () => {
+    setTimeout(() => {
+      scrollRef.current?.scrollToEnd({ animated: true });
+    }, 120);
   };
 
   if (isEdit && isLoadingTree) {
@@ -229,13 +348,17 @@ export default function AdminAddEditTreeScreen() {
 
       <KeyboardAvoidingView
         style={styles.keyboard}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView
+          ref={scrollRef}
           style={styles.scroll}
-          contentContainerStyle={styles.form}
+          contentContainerStyle={[
+            styles.form,
+            { paddingBottom: keyboardHeight > 0 ? Math.max(260, keyboardHeight + 120) : 220 },
+          ]}
           keyboardShouldPersistTaps="handled"
-          keyboardDismissMode="on-drag"
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
           automaticallyAdjustKeyboardInsets
           nestedScrollEnabled
           scrollEnabled
@@ -247,7 +370,7 @@ export default function AdminAddEditTreeScreen() {
         >
           <Text style={styles.sectionLabel}>Ağaç Bilgileri</Text>
           <FormInput label="Ağaç Adı *" placeholder="örn. Beyaz Meşe" value={name} onChangeText={setName} />
-          <FormInput label="Tür *" placeholder="örn. Quercus alba" value={species} onChangeText={setSpecies} />
+          <TreeSpeciesDropdown value={species} onChange={setSpecies} />
           <FormInput label="Konum Açıklaması *" placeholder="örn. Merkez Avlu" value={location} onChangeText={setLocation} />
 
           <Text style={styles.sectionLabel}>Fiziksel Bilgiler</Text>
@@ -281,13 +404,13 @@ export default function AdminAddEditTreeScreen() {
           ) : (
             <View style={styles.photoPlaceholder}>
               <Text style={styles.photoIcon}>📷</Text>
-              <Text style={styles.photoText}>Fotoğraf Seç</Text>
+              <Text style={styles.photoText}>Fotoğraf Çek</Text>
             </View>
           )}
         </TouchableOpacity>
         {(photo?.uri || existingPhotoUrl) && (
           <TouchableOpacity style={styles.changePhotoBtn} onPress={pickPhoto}>
-            <Text style={styles.changePhotoText}>Fotoğrafı Değiştir</Text>
+            <Text style={styles.changePhotoText}>Yeniden Fotoğraf Çek</Text>
           </TouchableOpacity>
         )}
 
@@ -343,7 +466,14 @@ export default function AdminAddEditTreeScreen() {
         </Modal>
 
         <Text style={styles.sectionLabel}>Bakım Ayarları</Text>
-        <FormInput label="Sulama Periyodu (gün)" placeholder="3" value={wateringPeriodDays} onChangeText={setWateringPeriodDays} keyboardType="number-pad" />
+        <FormInput
+          label="Sulama Periyodu (gün)"
+          placeholder="3"
+          value={wateringPeriodDays}
+          onChangeText={setWateringPeriodDays}
+          keyboardType="number-pad"
+          onFocus={scrollToBottomField}
+        />
 
         {!isSuggestionMode && (
           <>
@@ -381,7 +511,7 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 16, fontWeight: '700', color: Colors.neutralDark },
   keyboard: { flex: 1 },
   scroll: { flex: 1 },
-  form: { flexGrow: 1, padding: Spacing.md, paddingBottom: 220 },
+  form: { flexGrow: 1, padding: Spacing.md },
   sectionLabel: { fontSize: 13, fontWeight: '700', color: Colors.neutralMid, textTransform: 'uppercase', letterSpacing: 0.5, marginTop: Spacing.md, marginBottom: Spacing.sm },
   coordRow: { flexDirection: 'row', gap: Spacing.sm },
   coordInput: { flex: 1, minWidth: 0 },
