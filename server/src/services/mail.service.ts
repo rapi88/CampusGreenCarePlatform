@@ -9,7 +9,9 @@ const smtpPass = process.env.SMTP_PASS?.replace(/\s+/g, "");
 const smtpFrom =
   process.env.SMTP_FROM ||
   `"Campus Green Care" <${smtpUser}>`;
-const publicApiUrl = "https://campus-green-care-platform.vercel.app";
+const publicApiUrl = process.env.VERCEL_URL
+  ? `https://${process.env.VERCEL_URL}`
+  : `http://localhost:${config.port || 3000}`;
 
 const isSmtpConfigured = Boolean(smtpHost && smtpUser && smtpPass);
 
