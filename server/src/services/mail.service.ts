@@ -8,7 +8,7 @@ const smtpUser = process.env.SMTP_USER;
 const smtpPass = process.env.SMTP_PASS?.replace(/\s+/g, "");
 const smtpFrom =
   process.env.SMTP_FROM ||
-  '"Campus Green Care" <noreply@campusgreencare.gtu.edu.tr>';
+  `"Campus Green Care" <${smtpUser}>`;
 const publicApiUrl = "https://campus-green-care-platform.vercel.app";
 
 const isSmtpConfigured = Boolean(smtpHost && smtpUser && smtpPass);
