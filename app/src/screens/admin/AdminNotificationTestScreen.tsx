@@ -28,11 +28,14 @@ export default function AdminNotificationTestScreen() {
 
   const { data: treesResp } = useQuery({
     queryKey: ['trees'],
-    queryFn: () => treesApi.getAll(),
+    queryFn: async () => {
+      const res = await treesApi.getAll();
+      return res.data;
+    },
   });
 
   const status = statusResp?.data;
-  const trees = treesResp?.data ?? [];
+  const trees = treesResp ?? [];
 
   const selfTestMutation = useMutation({
     mutationFn: () => debugApi.sendSelfTest(),

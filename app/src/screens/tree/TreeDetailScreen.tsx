@@ -275,11 +275,13 @@ export default function TreeDetailScreen({ route, navigation }: Props) {
               </ScaleButton>
             ) : (
               <ScaleButton
-                style={styles.quickActionBtn}
+                style={[styles.quickActionBtn, styles.adoptBtn]}
                 onPress={() => navigation.navigate("Adoption", { treeId })}
               >
                 <Text style={styles.quickActionEmoji}>🤝</Text>
-                <Text style={styles.quickActionText}>Sahiplen</Text>
+                <Text style={[styles.quickActionText, styles.adoptBtnText]}>
+                  Sahiplen
+                </Text>
               </ScaleButton>
             )}
           </View>
@@ -465,15 +467,23 @@ const styles = StyleSheet.create({
     color: Colors.neutralDark,
     fontWeight: "500",
   },
-  waterBtn: {
+  adoptBtn: {
     backgroundColor: Colors.greenPrimary,
+  },
+  adoptBtnText: {
+    color: Colors.white,
+    fontWeight: "700",
+  },
+  waterBtn: {
+    backgroundColor: Colors.white,
     borderRadius: Radius.md,
     height: 56,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: Spacing.sm,
+    ...Shadow.card,
   },
-  waterBtnText: { color: Colors.white, fontSize: 17, fontWeight: "700" },
+  waterBtnText: { color: Colors.neutralDark, fontSize: 17, fontWeight: "700" },
 
   ecoBox: {
     backgroundColor: Colors.greenLight,
