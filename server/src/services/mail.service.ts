@@ -32,12 +32,10 @@ export const mailService = {
     const verifyLink = `${publicApiUrl.replace(/\/$/, "")}/api/auth/verify?token=${encodeURIComponent(token)}`;
 
     const htmlTemplate = `
-      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; color: #333; max-width: 600px; margin: 0 auto; padding: 30px; border: 1px solid #e0e0e0; border-radius: 12px; background-color: #fafafa;">
-        <h2 style="color: #2E7D32; font-size: 24px; margin-bottom: 20px;">Campus Green Care Platform'a Hoş Geldiniz! 🌿</h2>
-        <p style="font-size: 16px; line-height: 1.5; color: #555;">Kayıt olduğunuz için teşekkür ederiz. Kampüsümüzün yeşillenmesine katkıda bulunmak için son bir adım kaldı. Lütfen hesabınızı doğrulamak için aşağıdaki butona tıklayın:</p>
-        <a href="${verifyLink}" style="display: inline-block; background-color: #2E7D32; color: #ffffff; padding: 14px 28px; text-decoration: none; font-size: 16px; border-radius: 8px; margin-top: 25px; margin-bottom: 25px; font-weight: bold; box-shadow: 0 4px 6px rgba(46, 125, 50, 0.2);">E-postamı Doğrula</a>
-        <hr style="border: none; border-top: 1px solid #ddd; margin: 40px 0 20px;" />
-        <p style="font-size: 12px; color: #999;">Bu otomatik bir mesajdır, lütfen cevaplamayın. Eğer bu e-postayı yanlışlıkla aldıysanız, dikkate almayabilirsiniz.</p>
+      <div style="font-family: sans-serif; padding: 20px;">
+        <h2>Test Mesajı</h2>
+        <p>DEBUG MESSAGE: This is a test email without any links to check if spam filters are blocking it.</p>
+        <p>Gelen Token: ${token}</p>
       </div>
     `;
 
