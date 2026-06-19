@@ -83,7 +83,6 @@ export default function AdminAddEditTreeScreen() {
   const [tempPin, setTempPin] = useState<{lat: number, lng: number} | null>(null);
   const [photo, setPhoto] = useState<SelectedTreePhoto | null>(null);
   const [existingPhotoUrl, setExistingPhotoUrl] = useState<string | null>(null);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   const { data: treeResponse, isLoading: isLoadingTree } = useQuery({
     queryKey: ['tree', treeId],
@@ -125,27 +124,7 @@ export default function AdminAddEditTreeScreen() {
     }
   }, [treeResponse, isEdit]);
 
-  useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillChangeFrame' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
 
-    const showSubscription = Keyboard.addListener(showEvent, (event) => {
-      const keyboardTop = event.endCoordinates?.screenY;
-      const heightFromTop = typeof keyboardTop === 'number'
-        ? Math.max(0, windowHeight - keyboardTop)
-        : 0;
-      setKeyboardHeight(heightFromTop || event.endCoordinates?.height || 0);
-    });
-
-    const hideSubscription = Keyboard.addListener(hideEvent, () => {
-      setKeyboardHeight(0);
-    });
-
-    return () => {
-      showSubscription.remove();
-      hideSubscription.remove();
-    };
-  }, [windowHeight]);
 
   const saveMutation = useMutation({
     mutationFn: async (data: Partial<Tree>) => {
@@ -327,7 +306,7 @@ export default function AdminAddEditTreeScreen() {
   const scrollToBottomField = () => {
     setTimeout(() => {
       scrollRef.current?.scrollToEnd({ animated: true });
-    }, 120);
+    }, 300);
   };
 
   if (isEdit && isLoadingTree) {
@@ -355,7 +334,7 @@ export default function AdminAddEditTreeScreen() {
           style={styles.scroll}
           contentContainerStyle={[
             styles.form,
-            { paddingBottom: keyboardHeight > 0 ? Math.max(260, keyboardHeight + 120) : 220 },
+            { paddingBottom: 360 },
           ]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}

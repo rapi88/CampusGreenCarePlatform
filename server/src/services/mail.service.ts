@@ -9,15 +9,7 @@ const smtpPass = process.env.SMTP_PASS?.replace(/\s+/g, "");
 const smtpFrom =
   process.env.SMTP_FROM ||
   '"Campus Green Care" <noreply@campusgreencare.gtu.edu.tr>';
-const publicApiUrl =
-  process.env.VERCEL_API_URL ||
-  process.env.PUBLIC_API_URL ||
-  process.env.API_URL ||
-  (process.env.VERCEL_PROJECT_PRODUCTION_URL
-    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-    : process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : `http://localhost:${config.port || 3000}`);
+const publicApiUrl = "https://campus-green-care-platform.vercel.app";
 
 const isSmtpConfigured = Boolean(smtpHost && smtpUser && smtpPass);
 
