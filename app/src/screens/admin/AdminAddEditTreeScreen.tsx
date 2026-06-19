@@ -170,7 +170,11 @@ export default function AdminAddEditTreeScreen() {
           ? 'Ağaç önerinizin admin onayına gönderildi.'
           : `Ağaç başarıyla ${isEdit ? 'güncellendi' : 'eklendi'}.`,
       });
-      if (isEdit) navigation.goBack();
+      if (isEdit) {
+        navigation.goBack();
+      } else {
+        navigation.navigate('Tabs', { screen: 'MapTab' });
+      }
     },
     onError: (error, variables) => {
       unmarkTreeIdentitySubmitted(variables);
@@ -279,7 +283,6 @@ export default function AdminAddEditTreeScreen() {
 
     if (isSuggestionMode) {
       saveMutation.mutate(basePayload);
-      navigation.navigate('Tabs', { screen: 'MapTab' });
       return;
     }
 
@@ -288,7 +291,6 @@ export default function AdminAddEditTreeScreen() {
       isNaturalMonument,
       status: 'ACTIVE' // Admin created trees are ACTIVE directly
     });
-    navigation.navigate('Tabs', { screen: 'MapTab' });
   };
 
   const handleMapClick = (coords: {lat: number, lng: number}) => {

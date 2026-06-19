@@ -24,13 +24,22 @@ import { AuthStackParamList } from "../../navigation/AuthStack";
 
 type Props = NativeStackScreenProps<AuthStackParamList, "Login">;
 
-export default function LoginScreen({ navigation }: Props) {
+export default function LoginScreen({ navigation, route }: Props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [emailError, setEmailError] = useState("");
   const [loading, setLoading] = useState(false);
   const [needsVerification, setNeedsVerification] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
   const { setAuth } = useAuthStore();
+
+  React.useEffect(() => {
+    if (route.params?.message) {
+      setSuccessMessage(route.params.message);
+      // Clear param after setting it to prevent it from persisting
+      navigation.setParams({ message: undefined });
+    }
+  }, [route.params?.message]);
 
   const validate = () => {
     let valid = true;
@@ -94,6 +103,12 @@ export default function LoginScreen({ navigation }: Props) {
 
         {/* Form */}
         <View style={styles.form}>
+          {successMessage ? (
+            <View style={styles.successBanner}>
+              <Text style={styles.successBannerText}>{successMessage}</Text>
+            </View>
+          ) : null}
+
           <FormInput
             label="GTU E-posta"
             placeholder="name.surname@gtu.edu.tr"
@@ -170,6 +185,20 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderRadius: Radius.xl,
     padding: Spacing.lg,
+  },
+  successBanner: {
+    backgroundColor: "#E8F5E9",
+    padding: Spacing.md,
+    borderRadius: Radius.sm,
+    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: "#A5D6A7"
+  },
+  successBannerText: {
+    color: "#2E7D32",
+    fontSize: 14,
+    fontWeight: "600",
+    textAlign: "center"
   },
   forgotLink: { alignSelf: "flex-end", marginBottom: Spacing.md },
   link: { color: Colors.greenPrimary, fontWeight: "600", fontSize: 14 },

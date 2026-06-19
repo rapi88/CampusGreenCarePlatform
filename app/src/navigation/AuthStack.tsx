@@ -12,7 +12,7 @@ import { Colors } from '../theme/colors';
 
 export type AuthStackParamList = {
   Splash: undefined;
-  Login: undefined;
+  Login: { message?: string } | undefined;
   Register: undefined;
   ForgotPassword: undefined;
   VerifyCode: { email: string };

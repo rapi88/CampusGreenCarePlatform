@@ -6,7 +6,7 @@ export const adminApi = {
   createTree: (data: Partial<Tree>) => api.post<Tree>('/admin/trees', data),
   updateTree: (id: string, data: Partial<Tree>) => api.put<Tree>(`/admin/trees/${id}`, data),
   deleteTree: (id: string) => api.delete(`/admin/trees/${id}`),
-  uploadTreePhoto: (id: string, formData: FormData) => api.post<Tree>(`/admin/trees/${id}/photo`, formData),
+  uploadTreePhoto: (id: string, formData: FormData) => api.post<Tree>(`/admin/trees/${id}/photo`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
 
   // Suggestions
   getSuggestions: () => api.get<Tree[]>('/admin/trees/suggestions'),

@@ -48,11 +48,11 @@ export default function ResetPasswordNewScreen({ route, navigation }: Props) {
     setLoading(true);
     try {
       await authApi.resetPassword(resetToken, password);
-      Alert.alert(
-        "Şifre Güncellendi",
-        "Şifreniz başarıyla güncellendi. Artık yeni şifrenizle giriş yapabilirsiniz.",
-        [{ text: "Giriş Yap", onPress: () => navigation.navigate("Login") }]
-      );
+      Alert.alert("Şifre Güncellendi", "Şifreniz başarıyla güncellendi. Artık yeni şifrenizle giriş yapabilirsiniz.");
+      navigation.reset({ 
+        index: 0, 
+        routes: [{ name: 'Login', params: { message: "Şifreniz başarıyla güncellendi. Artık yeni şifrenizle giriş yapabilirsiniz." } }] 
+      });
     } catch (err: any) {
       Alert.alert(
         "Hata",

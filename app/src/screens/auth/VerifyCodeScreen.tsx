@@ -55,11 +55,11 @@ export default function VerifyCodeScreen({ route, navigation }: Props) {
     setLoading(true);
     try {
       await authApi.verifyCode(email, verificationCode);
-      Alert.alert(
-        "Doğrulama Başarılı",
-        "Hesabınız başarıyla doğrulandı. Lütfen giriş yapın.",
-        [{ text: "Tamam", onPress: () => navigation.navigate("Login") }]
-      );
+      Alert.alert("Doğrulama Başarılı", "Hesabınız başarıyla doğrulandı. Lütfen giriş yapın.");
+      navigation.reset({ 
+        index: 0, 
+        routes: [{ name: 'Login', params: { message: "Hesabınız başarıyla doğrulandı. Lütfen giriş yapın." } }] 
+      });
     } catch (err: any) {
       shake();
       setCode("");
