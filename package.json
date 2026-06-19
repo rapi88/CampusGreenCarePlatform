@@ -1,0 +1,13 @@
+{
+  "name": "campus-green-care-platform",
+  "version": "1.0.0",
+  "description": "Campus Green Care Platform — SmarterASP deployment root",
+  "scripts": {
+    "build": "cd server && npm install && npm run build",
+    "start": "node server/dist/index.js",
+    "postinstall": "cd server && npm install"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

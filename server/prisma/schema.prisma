@@ -3,45 +3,44 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "mysql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id             String           @id @default(uuid())
-  name           String
-  email          String           @unique
-  passwordHash   String
-  role           Role             @default(USER)
-  points         Int              @default(0)
-  avatarUrl      String?
-  expoPushToken  String?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  id                  String           @id @default(uuid()) @db.VarChar(36)
+  name                String
+  email               String           @unique
+  passwordHash        String           @db.Text
+  role                Role             @default(USER)
+  points              Int              @default(0)
+  avatarUrl           String?          @db.Text
+  expoPushToken       String?          @db.Text
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
   isVerified          Boolean          @default(false)
-  verifyCode          String?
+  verifyCode          String?          @db.Text
   verifyCodeExpiresAt DateTime?
-  resetCode           String?
+  resetCode           String?          @db.Text
   resetCodeExpiresAt  DateTime?
-  adoptions      Adoption[]
-  chatMessages   ChatMessage[]
-  notes          TreeNote[]
-  suggestions    TreeSuggestion[]
-  wateringEvents WateringEvent[]
+  adoptions           Adoption[]
+  chatMessages        ChatMessage[]
+  notes               TreeNote[]
+  suggestions         TreeSuggestion[]
+  wateringEvents      WateringEvent[]
 
   @@index([email])
   @@index([role])
 }
 
 model Tree {
-  id                 String          @id @default(uuid())
+  id                 String          @id @default(uuid()) @db.VarChar(36)
   name               String
   species            String
   latitude           Float
   longitude          Float
   location           String
-  photoPath          String?
+  photoPath          String?         @db.Text
   estimatedAge       Int             @default(0)
   height             Float           @default(0)
   plantingDate       DateTime?
@@ -62,9 +61,9 @@ model Tree {
 }
 
 model Adoption {
-  id        String   @id @default(uuid())
-  userId    String
-  treeId    String
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  userId    String   @db.VarChar(36)
+  treeId    String   @db.VarChar(36)
   createdAt DateTime @default(now())
   tree      Tree     @relation(fields: [treeId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -75,12 +74,12 @@ model Adoption {
 }
 
 model TreeSuggestion {
-  id              String   @id @default(uuid())
-  treeId          String   @unique
-  userId          String
+  id              String   @id @default(uuid()) @db.VarChar(36)
+  treeId          String   @unique @db.VarChar(36)
+  userId          String   @db.VarChar(36)
   dismissed       Boolean  @default(false)
   createdAt       DateTime @default(now())
-  rejectionReason String?
+  rejectionReason String?  @db.Text
   tree            Tree     @relation(fields: [treeId], references: [id], onDelete: Cascade)
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -88,9 +87,9 @@ model TreeSuggestion {
 }
 
 model WateringEvent {
-  id            String   @id @default(uuid())
-  userId        String
-  treeId        String
+  id            String   @id @default(uuid()) @db.VarChar(36)
+  userId        String   @db.VarChar(36)
+  treeId        String   @db.VarChar(36)
   latitude      Float
   longitude     Float
   gpsVerified   Boolean  @default(false)
@@ -104,10 +103,10 @@ model WateringEvent {
 }
 
 model ChatMessage {
-  id        String   @id @default(uuid())
-  treeId    String
-  userId    String
-  text      String
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  treeId    String   @db.VarChar(36)
+  userId    String   @db.VarChar(36)
+  text      String   @db.Text
   createdAt DateTime @default(now())
   tree      Tree     @relation(fields: [treeId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -116,10 +115,10 @@ model ChatMessage {
 }
 
 model TreeNote {
-  id        String   @id @default(uuid())
-  treeId    String
-  userId    String
-  text      String
+  id        String   @id @default(uuid()) @db.VarChar(36)
+  treeId    String   @db.VarChar(36)
+  userId    String   @db.VarChar(36)
+  text      String   @db.Text
   createdAt DateTime @default(now())
   tree      Tree     @relation(fields: [treeId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -129,7 +128,7 @@ model TreeNote {
 
 model Setting {
   key   String @id
-  value String
+  value String @db.Text
 }
 
 enum Role {
