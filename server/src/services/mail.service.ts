@@ -38,10 +38,12 @@ Eğer bu kaydı siz yapmadıysanız bu mesajı görmezden gelebilirsiniz.
     `.trim();
 
     if (!transporter) {
-      console.warn(
-        "[Email] SMTP is not configured. Verification code was not sent.",
-      );
-      throw new AppError("E-posta gönderimi yapılandırılmamış.", 500);
+      console.log(`\n======================================================`);
+      console.log(`🌿 [Campus Green Care - Geliştirici Modu]`);
+      console.log(`📧 E-posta: ${to}`);
+      console.log(`🔑 Doğrulama Kodu: ${code}`);
+      console.log(`======================================================\n`);
+      return { sent: true, devMode: true };
     }
 
     try {
@@ -77,10 +79,12 @@ Eğer bu isteği siz yapmadıysanız bu mesajı görmezden gelebilirsiniz.
     `.trim();
 
     if (!transporter) {
-      console.warn(
-        "[Email] SMTP is not configured. Password reset code was not sent.",
-      );
-      throw new AppError("E-posta gönderimi yapılandırılmamış.", 500);
+      console.log(`\n======================================================`);
+      console.log(`🌿 [Campus Green Care - Geliştirici Modu - Şifre Sıfırlama]`);
+      console.log(`📧 E-posta: ${to}`);
+      console.log(`🔑 Sıfırlama Kodu: ${code}`);
+      console.log(`======================================================\n`);
+      return { sent: true, devMode: true };
     }
 
     try {

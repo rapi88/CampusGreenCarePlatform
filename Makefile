@@ -1,4 +1,4 @@
-.PHONY: front front-android front-android-emulator front-ios back clean npm-clean npm_clean fclean install
+.PHONY: front front-android front-android-emulator front-ios back cms clean npm-clean npm_clean fclean install
 
 ANDROID_HOME ?= $(HOME)/Library/Android/sdk
 ANDROID_SDK_ROOT ?= $(ANDROID_HOME)
@@ -39,12 +39,19 @@ back:
 	@echo "Starting Backend..."
 	cd server && npm run dev
 
-# Install packages for both frontend and backend
+# Run CMS Web Portal
+cms:
+	@echo "Starting CMS Web Module..."
+	cd cms && npm run dev
+
+# Install packages for frontend, backend, and CMS
 install:
 	@echo "Installing frontend dependencies..."
 	cd app && npm install
 	@echo "Installing backend dependencies..."
 	cd server && npm install
+	@echo "Installing CMS dependencies..."
+	cd cms && npm install
 
 # Clean build files and caches
 clean:

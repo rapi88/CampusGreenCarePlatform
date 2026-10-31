@@ -39,3 +39,18 @@ make front
 
 Run `make front-ios` or `make front-android` again whenever native dependencies,
 Expo plugins, bundle identifiers, or native app config change.
+
+## CMS Web Yönetim Portalı
+
+Yöneticilerin ağaçları, öğrenci önerilerini, gönüllüleri ve sulama raporlarını web üzerinden yönetebileceği modern React + Vite yönetim paneli:
+
+```bash
+make cms
+# veya
+npm run cms
+```
+
+Tarayıcınızda **http://localhost:5173** adresini açarak:
+- **Yönetici Girişi:** `admin@gtu.edu.tr` / `Admin123!`
+- **Özellikler:** Ağaç CRUD & fotoğraf yükleme, öğrenci önerilerini onaylama/reddetme, gönüllü puan takibi, CSV sulama raporu ve interaktif GTÜ kampüs haritası.
+

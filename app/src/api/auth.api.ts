@@ -18,13 +18,14 @@ export interface RegisterResponse {
   message: string;
   userId: string;
   verificationEmailSent?: boolean;
+  devCode?: string;
 }
 
 export const authApi = {
   login: (data: LoginPayload) => api.post<{ token: string; user: User }>('/auth/login', data),
   register: (data: RegisterPayload) => api.post<RegisterResponse>('/auth/register', data),
   verifyCode: (email: string, code: string) => api.post<{ message: string }>('/auth/verify-code', { email, code }),
-  resendCode: (email: string) => api.post<{ message: string }>('/auth/resend-code', { email }),
+  resendCode: (email: string) => api.post<{ message: string; devCode?: string }>('/auth/resend-code', { email }),
   forgotPassword: (email: string) => api.post('/auth/forgot-password', { email }),
   verifyResetCode: (email: string, code: string) => api.post<{ resetToken: string, message: string }>('/auth/verify-reset-code', { email, code }),
   resetPassword: (token: string, password: string) => api.post<{ message: string }>('/auth/reset-password', { token, password }),

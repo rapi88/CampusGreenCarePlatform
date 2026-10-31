@@ -11,13 +11,14 @@ async function main() {
   const adminPassword = await bcrypt.hash('Admin123!', 12);
   const admin = await prisma.user.upsert({
     where: { email: 'admin@gtu.edu.tr' },
-    update: {},
+    update: { isVerified: true },
     create: {
       name: 'Admin Kullanıcı',
       email: 'admin@gtu.edu.tr',
       passwordHash: adminPassword,
       role: Role.ADMIN,
       points: 0,
+      isVerified: true,
     },
   });
   console.log(`  ✅ Admin user: ${admin.email}`);
@@ -27,35 +28,38 @@ async function main() {
   const users = await Promise.all([
     prisma.user.upsert({
       where: { email: 'mehmet.yilmaz@gtu.edu.tr' },
-      update: {},
+      update: { isVerified: true },
       create: {
         name: 'Mehmet Yılmaz',
         email: 'mehmet.yilmaz@gtu.edu.tr',
         passwordHash: userPassword,
         role: Role.USER,
         points: 320,
+        isVerified: true,
       },
     }),
     prisma.user.upsert({
       where: { email: 'zeynep.kaya@gtu.edu.tr' },
-      update: {},
+      update: { isVerified: true },
       create: {
         name: 'Zeynep Kaya',
         email: 'zeynep.kaya@gtu.edu.tr',
         passwordHash: userPassword,
         role: Role.USER,
         points: 280,
+        isVerified: true,
       },
     }),
     prisma.user.upsert({
       where: { email: 'ali.riza@gtu.edu.tr' },
-      update: {},
+      update: { isVerified: true },
       create: {
         name: 'Ali Rıza',
         email: 'ali.riza@gtu.edu.tr',
         passwordHash: userPassword,
         role: Role.USER,
         points: 245,
+        isVerified: true,
       },
     }),
   ]);
