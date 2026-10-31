@@ -31,6 +31,11 @@ export const config = {
     accessToken: process.env.EXPO_ACCESS_TOKEN || "",
   },
 
+  gemini: {
+    apiKey: process.env.GEMINI_API_KEY || "",
+    model: process.env.GEMINI_MODEL || "gemini-3.8-flash",
+  },
+
   upload: {
     treesDir: path.resolve(__dirname, "../../public/uploads/trees"),
     maxFileSize: 10 * 1024 * 1024, // 10 MB

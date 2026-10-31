@@ -19,6 +19,8 @@ import EditProfileScreen from '../screens/profile/EditProfileScreen';
 import LeaderboardScreen from '../screens/profile/LeaderboardScreen';
 import NotificationSettingsScreen from '../screens/profile/NotificationSettingsScreen';
 import AwardsScreen from '../screens/profile/AwardsScreen';
+import AssistantScreen from '../screens/assistant/AssistantScreen';
+import WeatherScreen from '../screens/weather/WeatherScreen';
 
 // Admin screens
 import AdminDashboardScreen from '../screens/admin/AdminDashboardScreen';
@@ -41,6 +43,8 @@ export type MainTabsParamList = {
   MapTab: undefined;
   MyTreesTab: undefined;
   AwardsTab: undefined;
+  AssistantTab: undefined;
+  WeatherTab: undefined;
   ProfileTab: undefined;
   AdminTab?: undefined;
 };
@@ -102,6 +106,8 @@ function TabNavigator() {
             MapTab: 'Harita',
             MyTreesTab: 'Ağaçlarım',
             AwardsTab: 'Ödüller',
+            AssistantTab: 'Asistan',
+            WeatherTab: 'Hava',
             ProfileTab: 'Profil',
             AdminTab: 'Admin',
           };
@@ -116,6 +122,8 @@ function TabNavigator() {
             MapTab: '🗺️',
             MyTreesTab: '🌲',
             AwardsTab: '🏆',
+            AssistantTab: '🌱',
+            WeatherTab: '☀️',
             ProfileTab: '👤',
             AdminTab: '⚙️',
           };
@@ -126,6 +134,8 @@ function TabNavigator() {
       <Tab.Screen name="MapTab" component={MapScreen} />
       <Tab.Screen name="MyTreesTab" component={MyTreesScreen} />
       <Tab.Screen name="AwardsTab" component={AwardsScreen} />
+      <Tab.Screen name="AssistantTab" component={AssistantScreen} />
+      <Tab.Screen name="WeatherTab" component={WeatherScreen} />
       <Tab.Screen name="ProfileTab" component={ProfileNavigator} />
       {isAdmin && (
         <Tab.Screen name="AdminTab" component={AdminDashboardScreen} />
