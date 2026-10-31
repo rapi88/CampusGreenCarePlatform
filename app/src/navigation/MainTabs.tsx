@@ -19,6 +19,7 @@ import EditProfileScreen from '../screens/profile/EditProfileScreen';
 import LeaderboardScreen from '../screens/profile/LeaderboardScreen';
 import NotificationSettingsScreen from '../screens/profile/NotificationSettingsScreen';
 import AwardsScreen from '../screens/profile/AwardsScreen';
+import WeatherScreen from '../screens/weather/WeatherScreen';
 
 // Admin screens
 import AdminDashboardScreen from '../screens/admin/AdminDashboardScreen';
