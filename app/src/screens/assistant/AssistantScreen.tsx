@@ -12,15 +12,18 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Toast from 'react-native-toast-message';
 import { useMutation } from '@tanstack/react-query';
-import { assistantApi } from '../../api/assistant.api';
+import * as Location from 'expo-location';
+import { assistantApi, AssistantTreeRecommendation } from '../../api/assistant.api';
 import { Colors } from '../../theme/colors';
 import { Radius, Shadow, Spacing } from '../../theme/spacing';
+import { extractError } from '../../utils/error';
 
 type Message = {
   id: string;
   text: string;
   role: 'assistant' | 'user';
   topic?: string;
+  trees?: AssistantTreeRecommendation[];
 };
 
 function TypingIndicator() {
@@ -47,6 +50,58 @@ const quickQuestions = [
   'Gübreleme nasıl yapılır?',
 ];
 
+const isNearbyTreeQuestion = (question: string) => {
+  const normalized = question
+    .toLocaleLowerCase('tr-TR')
+    .replace(/ı/g, 'i')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  const asksNearby = [
+    'en yakin',
+    'yakinimda',
+    'yakinimdaki',
+    'yakininda',
+    'yakinindaki',
+    'yakin',
+    'bana yakin',
+    'yakindaki',
+    'civarinda',
+    'bolgesinde',
+    'alaninda',
+    'cevremde',
+    'konumuma gore',
+  ].some((phrase) => normalized.includes(phrase));
+  const asksAboutTrees = ['agac', 'sahiplen', 'gonullu'].some((phrase) =>
+    normalized.includes(phrase),
+  );
+
+  return asksNearby && asksAboutTrees;
+};
+
+const isNamedAreaQuestion = (question: string) => {
+  const normalized = question
+    .toLocaleLowerCase('tr-TR')
+    .replace(/ı/g, 'i')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  const mentionsSavedCampusArea =
+    /yurt|kampus|kutuphane|muhendis|bilgisayar|rektor|konferans|avlu|sektor/.test(
+      normalized,
+    );
+  const usesAreaPhrase = [
+    'yakininda',
+    'yakinindaki',
+    'civarinda',
+    'civarindaki',
+    'bolgesinde',
+    'alaninda',
+    'icinde',
+    'konumunda',
+  ].some((phrase) => normalized.includes(phrase));
+
+  return mentionsSavedCampusArea || usesAreaPhrase;
+};
+
 const initialMessage: Message = {
   id: 'welcome',
   role: 'assistant',
@@ -66,19 +121,42 @@ export default function AssistantScreen() {
   };
 
   const askMutation = useMutation({
-    mutationFn: (value: string) => assistantApi.ask(value),
+    mutationFn: async (value: string) => {
+      let location: { latitude: number; longitude: number } | undefined;
+
+      if (isNearbyTreeQuestion(value) && !isNamedAreaQuestion(value)) {
+        const permission = await Location.requestForegroundPermissionsAsync();
+        if (permission.status === 'granted') {
+          const currentLocation = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          location = {
+            latitude: currentLocation.coords.latitude,
+            longitude: currentLocation.coords.longitude,
+          };
+        }
+      }
+
+      return assistantApi.ask(value, location);
+    },
     onSuccess: ({ data }, value) => {
       setMessages((current) => [
         ...current,
-        { id: `${Date.now()}-answer`, role: 'assistant', topic: data.topic, text: data.answer },
+        {
+          id: `${Date.now()}-answer`,
+          role: 'assistant',
+          topic: data.topic,
+          text: data.answer,
+          trees: data.trees,
+        },
       ]);
       setQuestion('');
     },
-    onError: () => {
+    onError: (error) => {
       Toast.show({
         type: 'error',
         text1: 'Yanıt alınamadı',
-        text2: 'Lütfen bağlantınızı kontrol edip tekrar deneyin.',
+        text2: extractError(error),
       });
     },
   });
@@ -136,6 +214,25 @@ export default function AssistantScreen() {
                   <Text style={[styles.messageText, isUser && styles.userMessageText]}>
                     {item.text}
                   </Text>
+                  {item.trees?.map((tree) => (
+                    <View key={tree.id} style={styles.treeRecommendation}>
+                      <Text style={styles.treeName}>{tree.name} · {tree.species}</Text>
+                      <Text style={styles.treeDetails}>{tree.location}</Text>
+                      {tree.distanceMeters !== undefined && (
+                        <Text style={styles.treeDistance}>
+                          {`Yaklaşık ${tree.distanceMeters >= 1000
+                            ? `${(tree.distanceMeters / 1000).toFixed(1)} km`
+                            : `${tree.distanceMeters} m`}`}
+                        </Text>
+                      )}
+                      {tree.volunteerCount !== undefined &&
+                        tree.maxVolunteers !== undefined && (
+                          <Text style={styles.treeDistance}>
+                            Sahiplenen gönüllü: {tree.volunteerCount}/{tree.maxVolunteers}
+                          </Text>
+                        )}
+                    </View>
+                  ))}
                 </View>
               </View>
             );
@@ -242,6 +339,15 @@ const styles = StyleSheet.create({
   userBubble: { backgroundColor: Colors.greenPrimary, borderBottomRightRadius: Radius.sm },
   topic: { fontSize: 12, fontWeight: '700', color: Colors.greenDark, marginBottom: Spacing.xs },
   messageText: { fontSize: 15, lineHeight: 22, color: Colors.neutralDark },
+  treeRecommendation: {
+    marginTop: Spacing.sm,
+    paddingTop: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: Colors.neutralLight,
+  },
+  treeName: { fontSize: 14, fontWeight: '700', color: Colors.greenDark },
+  treeDetails: { fontSize: 12, color: Colors.neutralMid, marginTop: 2 },
+  treeDistance: { fontSize: 12, fontWeight: '600', color: Colors.greenPrimary, marginTop: 2 },
   userMessageText: { color: Colors.white },
   quickQuestions: { marginLeft: 40, marginTop: Spacing.sm, gap: Spacing.sm },
   quickTitle: { fontSize: 13, fontWeight: '700', color: Colors.neutralMid },

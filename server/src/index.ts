@@ -82,7 +82,7 @@ app.listen(port, () => {
   ─────────────────────────────
   🚀 Server running on port ${port}
   📊 Environment: ${config.nodeEnv}
-  🗄️  Database: PostgreSQL
+  🗄️  Database: MySQL
   📦 Static files: /uploads
   ─────────────────────────────
   `);

@@ -2,7 +2,7 @@
 import { prisma } from '../config/database';
 import { BadRequestError, ConflictError, NotFoundError } from '../utils/errors';
 
-const MAX_TREES_PER_USER = 10;
+export const MAX_TREES_PER_USER = 10;
 
 export const adoptionService = {
   async adopt(userId: string, treeId: string) {

@@ -4,7 +4,7 @@ import { config } from '../config/env';
 import { haversineDistance } from '../utils/geo';
 import { BadRequestError, ForbiddenError, NotFoundError } from '../utils/errors';
 
-const WATERING_POINTS = 10;
+export const WATERING_POINTS = 10;
 
 export const wateringService = {
   async water(userId: string, treeId: string, userLat: number, userLng: number) {
