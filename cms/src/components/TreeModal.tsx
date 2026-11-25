@@ -7,6 +7,7 @@ interface TreeModalProps {
   onClose: () => void;
   onSubmit: (data: Partial<Tree>, photoFile?: File) => Promise<void>;
   initialTree?: Tree | null;
+  initialCoords?: { lat: number; lng: number } | null;
 }
 
 export const TreeModal: React.FC<TreeModalProps> = ({
@@ -14,6 +15,7 @@ export const TreeModal: React.FC<TreeModalProps> = ({
   onClose,
   onSubmit,
   initialTree,
+  initialCoords,
 }) => {
   const [name, setName] = useState('');
   const [species, setSpecies] = useState('');
@@ -48,9 +50,9 @@ export const TreeModal: React.FC<TreeModalProps> = ({
     } else {
       setName('');
       setSpecies('');
-      setLocation('');
-      setLatitude('40.80421');
-      setLongitude('29.36152');
+      setLocation(initialCoords ? `GTÜ Kampüsü (${initialCoords.lat.toFixed(5)}, ${initialCoords.lng.toFixed(5)})` : '');
+      setLatitude(initialCoords ? initialCoords.lat.toFixed(6) : '40.807147');
+      setLongitude(initialCoords ? initialCoords.lng.toFixed(6) : '29.357690');
       setEstimatedAge('5');
       setHeight('3.5');
       setWateringPeriodDays('3');
@@ -61,7 +63,7 @@ export const TreeModal: React.FC<TreeModalProps> = ({
       setPreviewUrl(null);
     }
     setError(null);
-  }, [initialTree, isOpen]);
+  }, [initialTree, initialCoords, isOpen]);
 
   if (!isOpen) return null;
 
