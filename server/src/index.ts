@@ -16,6 +16,7 @@ import debugRoutes from './routes/debug.routes';
 import awardRoutes from './routes/award.routes';
 import leaderboardRoutes from './routes/leaderboard.routes';
 import cronRoutes from './routes/cron.routes';
+import assistantRoutes from './routes/assistant.routes';
 
 const app = express();
 
@@ -57,6 +58,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/award', awardRoutes);
 app.use('/api/debug', debugRoutes);
 app.use('/api/cron', cronRoutes);
+app.use('/api/assistant', assistantRoutes);
 
 // ── 404 Handler ──────────────────────────────────────────
 

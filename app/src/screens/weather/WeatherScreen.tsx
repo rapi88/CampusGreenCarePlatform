@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -6,10 +6,10 @@ import {
   ScrollView,
   ActivityIndicator,
   RefreshControl,
-  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import * as Location from "expo-location";
+import { useQuery } from "@tanstack/react-query";
 import { Colors } from "../../theme/colors";
 import { Spacing, Radius, Shadow } from "../../theme/spacing";
 
@@ -18,7 +18,7 @@ const GTU_LAT = 40.807147;
 const GTU_LNG = 29.35769;
 
 // Open-Meteo API (Ücretsiz, API Key gerekmez)
-const WEATHER_API_URL = `https://api.open-meteo.com/v1/forecast?latitude=${GTU_LAT}&longitude=${GTU_LNG}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,uv_index&daily=weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,uv_index_max,sunrise,sunset&timezone=Europe/Istanbul&forecast_days=7`;
+const weatherUrl = (latitude: number, longitude: number) => `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,uv_index&daily=weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,uv_index_max,sunrise,sunset&timezone=Europe/Istanbul&forecast_days=7`;
 
 interface CurrentWeather {
   temperature: number;
@@ -138,11 +138,11 @@ const getWateringAdvice = (
   };
 };
 
-async function fetchWeather(): Promise<{
+async function fetchWeather(latitude: number, longitude: number): Promise<{
   current: CurrentWeather;
   daily: DailyForecast[];
 }> {
-  const res = await fetch(WEATHER_API_URL);
+  const res = await fetch(weatherUrl(latitude, longitude));
   if (!res.ok) throw new Error("Hava durumu verisi alınamadı");
   const data = await res.json();
 
@@ -178,7 +178,32 @@ async function fetchWeather(): Promise<{
 }
 
 export default function WeatherScreen() {
-  const queryClient = useQueryClient();
+  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    async function loadLocation() {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted" || !active) return;
+        const { coords } = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+        if (active) {
+          setLocation({ latitude: coords.latitude, longitude: coords.longitude });
+        }
+      } catch {
+        // Use the campus forecast when device location is unavailable.
+      }
+    }
+    void loadLocation();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const latitude = location?.latitude ?? GTU_LAT;
+  const longitude = location?.longitude ?? GTU_LNG;
 
   const {
     data,
@@ -187,8 +212,8 @@ export default function WeatherScreen() {
     error,
     refetch,
   } = useQuery({
-    queryKey: ["weather", "gtu"],
-    queryFn: fetchWeather,
+    queryKey: ["weather", latitude, longitude],
+    queryFn: () => fetchWeather(latitude, longitude),
     staleTime: 1000 * 60 * 15, // 15 dakika cache
     refetchInterval: 1000 * 60 * 30, // 30 dakikada bir yenile
   });
@@ -229,7 +254,9 @@ export default function WeatherScreen() {
       <View style={styles.header}>
         <View>
           <Text style={styles.headerTitle}>🌤️ Hava Durumu</Text>
-          <Text style={styles.headerSub}>GTÜ Çayırova Yerleşkesi</Text>
+          <Text style={styles.headerSub}>
+            {location ? "Bulunduğun konum" : "GTÜ Çayırova Yerleşkesi"}
+          </Text>
         </View>
       </View>
 
@@ -273,7 +300,7 @@ export default function WeatherScreen() {
             <View style={styles.metric}>
               <Text style={styles.metricIcon}>💨</Text>
               <Text style={styles.metricValue}>
-                {Math.round(current.windSpeed)} km/s
+                {Math.round(current.windSpeed)} km/sa
               </Text>
               <Text style={styles.metricLabel}>Rüzgâr</Text>
             </View>
@@ -400,8 +427,7 @@ export default function WeatherScreen() {
 
         {/* Source Attribution */}
         <Text style={styles.attribution}>
-          Veri kaynağı: Open-Meteo.com • GTÜ Çayırova ({GTU_LAT.toFixed(4)}°N,{" "}
-          {GTU_LNG.toFixed(4)}°E)
+          Veri kaynağı: Open-Meteo.com
         </Text>
       </ScrollView>
     </SafeAreaView>
